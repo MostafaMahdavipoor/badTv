@@ -1,0 +1,266 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "09025eb13ea1096575aeefc542fd7473",
+    "packages": [
+        {
+            "name": "laraxgram/core",
+            "version": "v3.0.8",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/laraXgram/Core.git",
+                "reference": "27f25ae3dc348c89957c7eea9115a61e2f7b89d7"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/laraXgram/Core/zipball/27f25ae3dc348c89957c7eea9115a61e2f7b89d7",
+                "reference": "27f25ae3dc348c89957c7eea9115a61e2f7b89d7",
+                "shasum": ""
+            },
+            "require": {
+                "ext-ctype": "*",
+                "ext-curl": "*",
+                "ext-filter": "*",
+                "ext-hash": "*",
+                "ext-intl": "*",
+                "ext-mbstring": "*",
+                "laraxgram/laraquest": "^1",
+                "laraxgram/tempora": "^1",
+                "php": "^8.2"
+            },
+            "replace": {
+                "laraxgram/auth": "self.version",
+                "laraxgram/bus": "self.version",
+                "laraxgram/cache": "self.version",
+                "laraxgram/collections": "self.version",
+                "laraxgram/concurrency": "self.version",
+                "laraxgram/conditionable": "self.version",
+                "laraxgram/conecrsation": "self.version",
+                "laraxgram/config": "self.version",
+                "laraxgram/console": "self.version",
+                "laraxgram/container": "self.version",
+                "laraxgram/contracts": "self.version",
+                "laraxgram/database": "self.version",
+                "laraxgram/encryption": "self.version",
+                "laraxgram/events": "self.version",
+                "laraxgram/filesystem": "self.version",
+                "laraxgram/hashing": "self.version",
+                "laraxgram/jdb": "self.version",
+                "laraxgram/keyboard": "self.version",
+                "laraxgram/listening": "self.version",
+                "laraxgram/log": "self.version",
+                "laraxgram/macroable": "self.version",
+                "laraxgram/pipeline": "self.version",
+                "laraxgram/process": "self.version",
+                "laraxgram/queue": "self.version",
+                "laraxgram/redis": "self.version",
+                "laraxgram/request": "self.version",
+                "laraxgram/support": "self.version",
+                "laraxgram/template": "self.version",
+                "laraxgram/translation": "self.version",
+                "laraxgram/validation": "self.version"
+            },
+            "suggest": {
+                "ext-apcu": "Required to use the APC cache driver.",
+                "ext-bcmath": "*",
+                "ext-fileinfo": "Required to use the Filesystem class.",
+                "ext-gmp": "*",
+                "ext-memcached": "Required to use the memcache cache driver.",
+                "ext-pcntl": "Required to use all features of the queue worker and console signal trapping.",
+                "ext-pdo": "Required to use all database features.",
+                "ext-posix": "Required to use all features of the queue worker.",
+                "ext-redis": "Required to use the Redis cache and queue drivers (^4.0|^5.0|^6.0)."
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "3.x-dev"
+                }
+            },
+            "autoload": {
+                "files": [
+                    "src/Collections/functions.php",
+                    "src/Collections/helpers.php",
+                    "src/Events/functions.php",
+                    "src/Filesystem/functions.php",
+                    "src/Foundation/helpers.php",
+                    "src/Log/functions.php",
+                    "src/Support/functions.php",
+                    "src/Support/helpers.php",
+                    "src/Keyboard/helpers.php",
+                    "src/Request/helpers.php",
+                    "src/Console/Prompts/helpers.php",
+                    "src/Console/Prompts/Convertor/Functions.php"
+                ],
+                "psr-4": {
+                    "LaraGram\\": "src/",
+                    "LaraGram\\Support\\": [
+                        "src/Macroable/",
+                        "src/Collections/",
+                        "src/Conditionable/"
+                    ]
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "laraXgram",
+                    "email": "laraxgram@gmail.com"
+                }
+            ],
+            "description": "The core of the LaraGram!",
+            "keywords": [
+                "bot",
+                "framework",
+                "laragram",
+                "laraquest",
+                "laravel",
+                "telegram"
+            ],
+            "support": {
+                "issues": "https://github.com/laraxgram/core/issues",
+                "source": "https://github.com/laraxgram/core"
+            },
+            "time": "2025-07-27T17:28:40+00:00"
+        },
+        {
+            "name": "laraxgram/laraquest",
+            "version": "v1.3.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/laraXgram/Laraquest.git",
+                "reference": "7337a00f36443650eecc04f79eeb74b968b91b44"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/laraXgram/Laraquest/zipball/7337a00f36443650eecc04f79eeb74b968b91b44",
+                "reference": "7337a00f36443650eecc04f79eeb74b968b91b44",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*"
+            },
+            "type": "library",
+            "extra": {
+                "laragram": {
+                    "providers": [
+                        "LaraGram\\Laraquest\\LaraquestServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "LaraGram\\Laraquest\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "laraXgram",
+                    "email": "laraxgram@gmail.com"
+                }
+            ],
+            "description": "Sending requests and receiving Telegram updates.",
+            "keywords": [
+                "bot",
+                "laragram",
+                "laraquest",
+                "laravel",
+                "php",
+                "telegram"
+            ],
+            "support": {
+                "issues": "https://github.com/laraxgram/laraquest/issues",
+                "source": "https://github.com/laraxgram/laraquest"
+            },
+            "time": "2025-07-17T21:23:13+00:00"
+        },
+        {
+            "name": "laraxgram/tempora",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/laraXgram/Tempora.git",
+                "reference": "6d9106706065b5f68b66229c3472e9e271280bae"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/laraXgram/Tempora/zipball/6d9106706065b5f68b66229c3472e9e271280bae",
+                "reference": "6d9106706065b5f68b66229c3472e9e271280bae",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.2"
+            },
+            "type": "library",
+            "extra": {
+                "laragram": {
+                    "providers": [
+                        "LaraGram\\Tempora\\LaraGram\\ServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "LaraGram\\Tempora\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Brian Nesbitt",
+                    "email": "brian@nesbot.com",
+                    "homepage": "https://markido.com"
+                },
+                {
+                    "name": "kylekatarnls",
+                    "homepage": "https://github.com/kylekatarnls"
+                },
+                {
+                    "name": "LaraGram",
+                    "email": "laraxgram@gmail.com"
+                }
+            ],
+            "description": "Advanced interface for working with date and time, based on Carbon.",
+            "keywords": [
+                "Tempora",
+                "bot",
+                "carbon",
+                "date",
+                "datetime",
+                "laragram",
+                "laraquest",
+                "telegram",
+                "time"
+            ],
+            "support": {
+                "issues": "https://github.com/laraXgram/Tempora/issues",
+                "source": "https://github.com/laraXgram/Tempora/tree/v1.0.0"
+            },
+            "time": "2025-07-09T17:11:38+00:00"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": [],
+    "prefer-stable": true,
+    "prefer-lowest": false,
+    "platform": {
+        "php": "^8.2"
+    },
+    "platform-dev": [],
+    "plugin-api-version": "2.6.0"
+}
