@@ -116,6 +116,17 @@ class Database
         return $this->saveSetting($settingsKey, $channels, 'لیست کانال‌های ثبت شده در ربات');
     }
 
+    public function deleteChannelByUsername(string $channelUsername): bool
+    {
+        $settingsKey = 'registered_channels';
+        $channels = $this->getSetting($settingsKey, []);
+        if (! in_array($channelUsername, $channels)) {
+            return true;
+        }
+        $updatedChannels = array_diff($channels, [$channelUsername]);
+        return $this->saveSetting($settingsKey, array_values($updatedChannels), 'لیست کانال‌های ثبت شده در ربات');
+    }
+
     public function getAllChannels(): array
     {
         return $this->getSetting('registered_channels', []);

@@ -154,6 +154,18 @@ class BotHandler
                 $this->fileHandler->saveState($chatId, '');
                 $this->AdminMenu($messageId);
                 break;
+
+            case (str_starts_with($callbackData, 'delete_channel_')):
+                $channelUsernameToDelete = urldecode(substr($callbackData, strlen('delete_channel_')));
+                $deleted                 = $this->db->deleteChannelByUsername($channelUsernameToDelete);
+                if ($deleted) {
+                    $this->answerCallbackQuery($callbackQueryId, "کانال با موفقیت حذف شد.", true);
+                    $this->showChannelsMenu($chatId, $messageId);
+                } else {
+                    $this->answerCallbackQuery($callbackQueryId, "خطا در حذف کانال.", true);
+                }
+                break;
+
         }
 
     }
@@ -206,13 +218,11 @@ class BotHandler
         }
 
         $inlineKeyboard = [];
-        foreach ($channels as $channel) {
-            $channelUsername = $channel['username'] ?? 'خطا';
-            $channelId       = $channel['id'] ?? 0;
+        foreach ($channels as $channelUsername) {
 
             $inlineKeyboard[] = [
                 ['text' => $channelUsername, 'url' => 'https://t.me/' . ltrim($channelUsername, '@')],
-                ['text' => '❌', 'callback_data' => 'delete_channel_' . $channelId],
+                ['text' => '❌', 'callback_data' => 'delete_channel_' . $channelUsername],
             ];
         }
 
@@ -232,16 +242,16 @@ class BotHandler
         $channelUsername   = str_replace(['https://t.me/', 't.me/', '@'], '', $channelLink);
         $channelIdentifier = '@' . $channelUsername;
         $isAdmin           = $this->checkBotAdminStatus($channelIdentifier);
-        $messageId = $this->fileHandler->getMessageId($chatId);
+        $messageId         = $this->fileHandler->getMessageId($chatId);
 
         if ($isAdmin) {
             $this->db->addChannel($channelIdentifier);
             $inlineKeyboard[] = [['text' => '⬅️ بازگشت  ', 'callback_data' => 'settings_manage_channels']];
 
             $this->sendRequest('editMessageText', [
-                'chat_id' => $chatId,
+                'chat_id'      => $chatId,
                 'message_id'   => $messageId,
-                'text'    => "✅ کانال {$channelIdentifier} با موفقیت اضافه شد.",
+                'text'         => "✅ کانال {$channelIdentifier} با موفقیت اضافه شد.",
                 'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
 
             ]);
@@ -300,6 +310,19 @@ class BotHandler
             $method = 'editMessageText';
         }
         $this->sendRequest($method, $data);
+    }
+    private function answerCallbackQuery(string $callbackQueryId, string $text = '', bool $showAlert = false): void
+    {
+        $data = [
+            'callback_query_id' => $callbackQueryId,
+        ];
+        if (! empty($text)) {
+            $data['text'] = $text;
+        }
+        if ($showAlert) {
+            $data['show_alert'] = true;
+        }
+        $this->sendRequest('answerCallbackQuery', $data);
     }
     public function sendRequest($method, $data)
     {
