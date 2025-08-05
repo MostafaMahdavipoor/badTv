@@ -235,8 +235,6 @@ class BotHandler
                     if ($goalId) {
                         $this->showChannelSelectionMenu($chatId, $messageId, $goalId);
                     }
-
-                    $this->fileHandler->saveState($chatId, '');
                 }
                 break;
 
@@ -381,8 +379,6 @@ class BotHandler
                 $this->sendRequest('sendMessage', ['chat_id' => $chatId, 'text' => '✅ گل با کپشن جدید ذخیره شد. حالا کانال‌های مقصد را انتخاب کنید:']);
                 $this->showChannelSelectionMenu($chatId, null, $goalId);
             }
-
-            $this->fileHandler->saveState($chatId, '');
         }
     }
 
@@ -411,10 +407,10 @@ class BotHandler
     {
 
         $stateData = [
+            'state'             => 'selecting_channels',
             'goal_id'           => $goalId,
             'selected_channels' => [],
         ];
-        $this->fileHandler->saveState($chatId, 'selecting_channels');
         $this->fileHandler->saveUser($chatId, $stateData);
         $allChannels = $this->db->getAllChannels();
         $text        = "لطفاً کانال‌های مورد نظر برای ارسال را انتخاب کنید:";
