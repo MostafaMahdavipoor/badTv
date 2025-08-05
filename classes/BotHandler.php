@@ -255,7 +255,6 @@ class BotHandler
                 }
                 break;
 
-
             case (str_starts_with($callbackData, 'toggle_channel_')):
 
                 if (preg_match('/^toggle_channel_(\d+)_(.+)$/', $callbackData, $matches)) {
@@ -274,12 +273,12 @@ class BotHandler
                         }
 
                         $stateData['selected_channels'] = array_values($selectedChannels);
-                        $this->fileHandler->saveUser($chatId,  $stateData);
+                        $this->fileHandler->saveUser($chatId, $stateData);
 
                         $this->updateChannelSelectionMenu($chatId, $messageId, $goalId, $selectedChannels);
-                    }else{
-    error_log("Could not parse callback_data: " . print_r($stateData, true));
-}
+                    } else {
+                        error_log("Could not parse callback_data: " . print_r($stateData, true));
+                    }
                 } else {
                     error_log("Could not parse callback_data: " . $callbackData);
                 }
@@ -416,7 +415,7 @@ class BotHandler
             'goal_id'           => $goalId,
             'selected_channels' => [],
         ];
-        $this->fileHandler->saveUser($chatId,  $stateData);
+        $this->fileHandler->saveUser($chatId, $stateData);
         $allChannels = $this->db->getAllChannels();
         $text        = "لطفاً کانال‌های مورد نظر برای ارسال را انتخاب کنید:";
 
