@@ -164,6 +164,7 @@ class BotHandler
                     $this->answerCallbackQuery($callbackQueryId, "خطا در حذف کانال.", true);
                 }
                 break;
+
             case 'settings_list_admins':
                 $this->showAdminsMenu($chatId, $messageId);
                 break;
@@ -313,13 +314,14 @@ class BotHandler
         $inlineKeyboard[] = [['text' => '➕ افزودن ادمین جدید', 'callback_data' => 'prompt_add_admin']];
         $inlineKeyboard[] = [['text' => '⬅️ بازگشت به تنظیمات', 'callback_data' => 'admin_settings']];
 
-        $this->sendRequest('editMessageText', [
+        $res = $this->sendRequest('editMessageText', [
             'chat_id'      => $chatId,
             'message_id'   => $messageId,
             'text'         => $text,
             'parse_mode'   => 'HTML',
             'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
         ]);
+        error_log('update:' . print_r($res ,true));
     }
 
     private function showChannelsMenu(int $chatId, int $messageId): void

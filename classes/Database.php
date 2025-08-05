@@ -93,7 +93,7 @@ class Database
 
     public function getAdmins(): array
     {
-        $stmt = $this->pdo->query("SELECT id, chat_id, username FROM users WHERE is_admin = 1");
+        $stmt = $this->pdo->query("SELECT * FROM users WHERE is_admin = 1");
         return $stmt->fetchAll();
     }
 
