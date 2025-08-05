@@ -95,24 +95,26 @@ class BotHandler
     {}
     public function handleRequest(): void
     {
-        if (str_starts_with($this->text, "/start")) {
-
-            $this->sendRequest("sendMessage", [
-                "chat_id"    => $this->chatId,
-                "text"       => "hi :)",
-                "parse_mode" => "HTML",
-
-            ]);
-
-            return;
-        }
-
+        
         if (isset($this->message["from"])) {
             $this->db->saveUser($this->message["from"]);
         } else {
             error_log("BotHandler::handleRequest: 'from' field missing for non-start message. Update type might not be a user message.");
         }
+
         $state = $this->fileHandler->getState($this->chatId);
+        $text = $this->message['text'] ?? null;
+
+        if ($text === '/start') {
+            $fullName = $this->db->getUserFullName($this->chatId);
+            $welcomeMessage = "سلام {$fullName} عزیز!\n به ربات ما خوش آمدید.";
+            $this->sendRequest("sendMessage", [
+                "chat_id"    => $welcomeMessage,
+                "text"       => "hi :)",
+                "parse_mode" => "HTML",
+
+            ]);
+        } 
     }
 
     public function sendRequest($method, $data)
