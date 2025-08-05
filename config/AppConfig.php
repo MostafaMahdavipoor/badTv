@@ -30,7 +30,7 @@ class AppConfig
                 ],
                 'bot' => [
                     'token' => $_ENV['BOT_TOKEN'] ?? $_SERVER['BOT_TOKEN'],
-                    // 'merchant_id' => $_ENV['MERCHANT_ID'],
+                    'merchant_id' => '',
                     'bot_link' => $_ENV['BOT_LINK'],
                 ],
                 'ai' => [
