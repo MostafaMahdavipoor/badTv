@@ -300,9 +300,8 @@ class BotHandler
 
                     if ($goal) {
                         $caption    = $goal['caption'];
-                        $viewButton = [['text' => '👁 مشاهده گل', 'url' => "{$this->botLink}goal_{$goal['token']}"]];
+                        $viewButton = [[['text' => '👁 مشاهده گل', 'url' => "{$this->botLink}goal_{$goal['token']}"]]];
                         foreach ($selectedChannels as $channelName) {
-
                             $this->sendRequest('sendMessage', [
                                 'chat_id'      => $channelName,
                                 'text'         => $caption,
