@@ -102,8 +102,7 @@ class BotHandler
 
                 $settingsKeyboard = [
                     [
-                        ['text' => '➕ افزودن ادمین', 'callback_data' => 'settings_add_admin'],
-                        ['text' => '👥 لیست ادمین‌ها', 'callback_data' => 'settings_list_admins'],
+                        ['text' => '👥 مدیریت ادمین‌ها', 'callback_data' => 'settings_list_admins'],
                     ],
                     [
                         ['text' => '📢 مدیریت کانال‌ها', 'callback_data' => 'settings_manage_channels'],
@@ -165,6 +164,44 @@ class BotHandler
                     $this->answerCallbackQuery($callbackQueryId, "خطا در حذف کانال.", true);
                 }
                 break;
+            case 'settings_list_admins':
+                $this->showAdminsMenu($chatId, $messageId);
+                break;
+
+            case 'prompt_add_admin':
+              
+                $this->fileHandler->saveState($chatId, 'awaiting_admin_id');
+                $this->fileHandler->saveMessageId($chatId, $messageId);
+
+                $promptText = "لطفاً اطلاعات کاربر مورد نظر را به یکی از سه روش زیر ارسال کنید:\n\n";
+                $promptText .= "1️⃣ ارسال آیدی عددی (مثال: 12345678)\n";
+                $promptText .= "2️⃣ ارسال یوزرنیم (مثال: @username)\n";
+                $promptText .= "3️⃣ فوروارد کردن پیامی از کاربر\n\n";
+                $promptText .= "<i>توجه: برای افزودن ادمین کاربر باید قبلاً ربات را استارت زده باشد.</i>";
+
+                $cancelKeyboard = [[['text' => '❌ لغو و بازگشت', 'callback_data' => 'settings_list_admins']]];
+
+                $this->sendRequest("editMessageText", [
+                    'chat_id'      => $chatId,
+                    'message_id'   => $messageId,
+                    'text'         => $promptText,
+                    'parse_mode'   => 'HTML', 
+                    'reply_markup' => json_encode(['inline_keyboard' => $cancelKeyboard]),
+                ]);
+                break;
+
+            case (str_starts_with($callbackData, 'remove_admin_')):
+                $adminIdToRemove = substr($callbackData, strlen('remove_admin_'));
+
+                $removed = $this->db->removeAdmin((int) $adminIdToRemove);
+
+                if ($removed) {
+                    $this->answerCallbackQuery($callbackQueryId, "ادمین با موفقیت حذف شد.", true);
+                    $this->showAdminsMenu($chatId, $messageId);
+                } else {
+                    $this->answerCallbackQuery($callbackQueryId, "خطا در حذف ادمین.", true);
+                }
+                break;
 
         }
 
@@ -203,7 +240,85 @@ class BotHandler
         if ($state === 'awaiting_channel_link') {
             $this->deleteMessageWithDelay();
             $this->processChannelLink($this->chatId, $this->text);
+        } elseif ($state === 'awaiting_admin_id') {
+            $this->processAdminAddition($this->message);
         }
+    }
+
+    private function processAdminAddition(array $message): void
+    {
+        $chatId           = $message['chat']['id'];
+        $newAdminId       = null;
+        $newAdminUsername = null;
+        if (isset($message['forward_from'])) {
+            $newAdminId       = $message['forward_from']['id'];
+            $newAdminUsername = $message['forward_from']['username'] ?? $message['forward_from']['first_name'];
+        } elseif (isset($message['text'])) {
+            $text = $message['text'];
+            if (is_numeric($text)) {
+                $newAdminId       = (int) $text;
+                $newAdminUsername = "کاربر با آیدی " . $newAdminId;
+            } else {
+                $usernameToFind = ltrim($text, '@');
+                $user           = $this->db->getUserByUsername($usernameToFind);
+
+                if ($user) {
+                    $newAdminId       = $user['chat_id'];
+                    $newAdminUsername = '@' . $user['username'];
+                }
+            }
+        }
+
+        $messageIdToEdit = $this->fileHandler->getMessageId($chatId);
+
+        if ($newAdminId && $messageIdToEdit) {
+            $this->db->addAdmin($newAdminId);
+            $this->answerCallbackQuery("", "کاربر {$newAdminUsername} با موفقیت به لیست ادمین‌ها اضافه شد.");
+            $this->showAdminsMenu($chatId, $messageIdToEdit);
+        } else {
+            $this->sendRequest('sendMessage', [
+                'chat_id' => $chatId,
+                'text'    => "❌ ورودی نامعتبر است.\n\n" .
+                "لطفاً آیدی عددی کاربر، یوزرنیم او (که قبلا ربات را استارت زده) را ارسال کرده یا پیام وی را فوروارد کنید.",
+            ]);
+        }
+        $this->fileHandler->saveState($chatId, '');
+    }
+
+    private function showAdminsMenu(int $chatId, int $messageId): void
+    {
+        $admins = $this->db->getAdmins();
+
+        $text = "👥 <b>مدیریت ادمین‌ها</b>\n\n";
+        if (empty($admins)) {
+            $text .= "در حال حاضر به جز شما، ادمین دیگری ثبت نشده است.";
+        } else {
+            $text .= "لیست ادمین‌های سیستم:";
+        }
+
+        $inlineKeyboard = [];
+        foreach ($admins as $admin) {
+            if ($admin['chat_id'] == $chatId) {
+                continue;
+            }
+
+            $adminName        = $admin['first_name'] ?? ('@' . $admin['username']) ?? $admin['chat_id'];
+            $inlineKeyboard[] = [
+                ['text' => "👤 " . $adminName, 'callback_data' => 'admin_info_' . $admin['chat_id']],
+                ['text' => '❌ حذف', 'callback_data' => 'remove_admin_' . $admin['chat_id']],
+            ];
+        }
+
+        $inlineKeyboard[] = [['text' => '➕ افزودن ادمین جدید', 'callback_data' => 'prompt_add_admin']];
+        $inlineKeyboard[] = [['text' => '⬅️ بازگشت به تنظیمات', 'callback_data' => 'admin_settings']];
+
+        $this->sendRequest('editMessageText', [
+            'chat_id'      => $chatId,
+            'message_id'   => $messageId,
+            'text'         => $text,
+            'parse_mode'   => 'HTML',
+            'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
+        ]);
     }
 
     private function showChannelsMenu(int $chatId, int $messageId): void

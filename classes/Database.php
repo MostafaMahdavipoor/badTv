@@ -119,14 +119,24 @@ class Database
     public function deleteChannelByUsername(string $channelUsername): bool
     {
         $settingsKey = 'registered_channels';
-        $channels = $this->getSetting($settingsKey, []);
+        $channels    = $this->getSetting($settingsKey, []);
         if (! in_array($channelUsername, $channels)) {
             return true;
         }
         $updatedChannels = array_diff($channels, [$channelUsername]);
         return $this->saveSetting($settingsKey, array_values($updatedChannels), 'لیست کانال‌های ثبت شده در ربات');
     }
+    public function addAdmin(int $chatId): bool
+    {
+        $stmt = $this->pdo->prepare("UPDATE users SET is_admin = 1 WHERE chat_id = ?");
+        return $stmt->execute([$chatId]);
+    }
 
+    public function removeAdmin(int $chatId): bool
+    {
+        $stmt = $this->pdo->prepare("UPDATE users SET is_admin = 0 WHERE chat_id = ?");
+        return $stmt->execute([$chatId]);
+    }
     public function getAllChannels(): array
     {
         return $this->getSetting('registered_channels', []);
@@ -204,7 +214,7 @@ class Database
     {
         $stmt = $this->pdo->prepare("SELECT * FROM users WHERE username = ? LIMIT 1");
         $stmt->execute([$username]);
-        return $stmt->fetch(); // fetch() یک ردیف را برمی‌گرداند یا در صورت نبودن false
+        return $stmt->fetch();
     }
 
     public function getUserLanguage($chatId)
