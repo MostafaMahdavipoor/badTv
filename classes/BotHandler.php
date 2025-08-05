@@ -187,7 +187,7 @@ class BotHandler
             }
             return;
         } elseif ($state === 'awaiting_channel_link') {
-            $this->processChannelLink($chatId, $text);
+            $this->processChannelLink($this->chatId, $this->text);
         }
     }
 

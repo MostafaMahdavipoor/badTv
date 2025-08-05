@@ -11,7 +11,7 @@ $config = AppConfig::getConfig();
 
 
 $update = json_decode(file_get_contents('php://input'), true);
-
+error_log('update:' . print_r($update .true));
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -22,7 +22,7 @@ if (isset($update['inline_query'])) {
     $query = $inlineQuery['query'];
     $bot = new BotHandler($chatId, $text, $messageId, $message);
 
-    $bot->handleInlineQuery($inlineQuery);
+    $bot->handleInlineQuery();
 } elseif (isset($update['message'])) {
     $message = $update['message'];
     $chatId = $message['chat']['id'];
