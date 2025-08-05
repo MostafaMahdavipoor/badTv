@@ -286,7 +286,7 @@ class BotHandler
 
             case (str_starts_with($callbackData, 'send_goal_')):
                 $goalId    = substr($callbackData, strlen('send_goal_'));
-                $stateData = $this->fileHandler->getUser($chatId)['state'] ?? null;
+                $stateData = $this->fileHandler->getUser($chatId) ?? null;
 
                 if ($stateData && $stateData['state'] === 'selecting_channels' && $stateData['goal_id'] == $goalId) {
                     $selectedChannels = $stateData['selected_channels'];
@@ -315,7 +315,7 @@ class BotHandler
                             'text'    => '✅ پیام با موفقیت به ' . count($selectedChannels) . ' کانال ارسال شد.',
                         ]);
 
-                        $this->fileHandler->saveUser($chatId, ['state' => null]);
+                        $this->fileHandler->clearUser($chatId);
                     }
                 }
                 break;
