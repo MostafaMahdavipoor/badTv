@@ -243,39 +243,45 @@ class BotHandler
             case 'change_caption':
                 $stateData = $this->fileHandler->getUser($chatId);
                 if (isset($stateData['state']) && $stateData['state'] === 'awaiting_caption_confirmation') {
-                    $newState = ['state' => 'awaiting_new_caption', 'file_id' => $stateData['file_id'], 'type' => $stateData['type']];
+                    $newState       = ['state' => 'awaiting_new_caption', 'file_id' => $stateData['file_id'], 'type' => $stateData['type']];
                     $cancelKeyboard = [[['text' => '❌ لغو', 'callback_data' => 'admin_panel']]];
                     $this->fileHandler->saveUser($chatId, $newState);
                     $this->sendRequest('editMessageText', [
-                        'chat_id' => $chatId, 'message_id' => $messageId,
-                        'text'    => 'لطفاً کپشن جدید را ارسال کنید.',
-                         'reply_markup' => json_encode(['inline_keyboard' => $cancelKeyboard]),
-        
+                        'chat_id'      => $chatId, 'message_id' => $messageId,
+                        'text'         => 'لطفاً کپشن جدید را ارسال کنید.',
+                        'reply_markup' => json_encode(['inline_keyboard' => $cancelKeyboard]),
+
                     ]);
                 }
                 break;
 
+
             case (str_starts_with($callbackData, 'toggle_channel_')):
 
-                list(, $goalId, $channelName) = explode('_', $callbackData, 3);
+                if (preg_match('/^toggle_channel_(\d+)_(.+)$/', $callbackData, $matches)) {
+                    $goalId      = (int) $matches[1]; // بخش عددی به عنوان goalId
+                    $channelName = $matches[2];       // بقیه رشته به عنوان channelName
 
-                $stateData = $this->fileHandler->getUser($chatId)['state'] ?? null;
-                if ($stateData && $stateData['name'] === 'selecting_channels' && $stateData['goal_id'] == $goalId) {
-                    $selectedChannels = $stateData['selected_channels'];
+                    $stateData = $this->fileHandler->getUser($chatId)['state'] ?? null;
 
-                    if (($key = array_search($channelName, $selectedChannels)) !== false) {
-                        unset($selectedChannels[$key]);
-                    } else {
-                        $selectedChannels[] = $channelName;
+                    if ($stateData && $stateData['name'] === 'selecting_channels' && $stateData['goal_id'] == $goalId) {
+                        $selectedChannels = $stateData['selected_channels'];
+
+                        if (($key = array_search($channelName, $selectedChannels)) !== false) {
+                            unset($selectedChannels[$key]);
+                        } else {
+                            $selectedChannels[] = $channelName;
+                        }
+
+                        $stateData['selected_channels'] = array_values($selectedChannels);
+                        $this->fileHandler->saveUser($chatId, ['state' => $stateData]);
+
+                        $this->updateChannelSelectionMenu($chatId, $messageId, $goalId, $selectedChannels);
                     }
-
-                    $stateData['selected_channels'] = array_values($selectedChannels);
-                    $this->fileHandler->saveUser($chatId, ['state' => $stateData]);
-
-                    $this->updateChannelSelectionMenu($chatId, $messageId, $goalId, $selectedChannels);
+                } else {
+                    error_log("Could not parse callback_data: " . $callbackData);
                 }
                 break;
-            // در switch متد handleCallbackQuery
 
             case (str_starts_with($callbackData, 'send_goal_')):
                 $goalId    = substr($callbackData, strlen('send_goal_'));
@@ -357,8 +363,8 @@ class BotHandler
             $this->deleteMessageWithDelay();
             $this->processGoalUpload($this->message);
         } elseif ($state === 'awaiting_new_caption') {
-        $this->processNewCaption($this->message);
-    }
+            $this->processNewCaption($this->message);
+        }
     }
     private function processNewCaption(array $message): void
     {
@@ -653,10 +659,10 @@ class BotHandler
         $panelText = "👨‍💻 <b>پنل مدیریت ربات</b>\n\n";
         $panelText .= "ادمین عزیز، خوش آمدید. لطفاً یک گزینه را انتخاب کنید:";
 
-        $inlineKeyboard = [     
+        $inlineKeyboard = [
 
             [
-                ['text' => '⚽ آپلود گل', 'callback_data' => 'admin_upload_goal']
+                ['text' => '⚽ آپلود گل', 'callback_data' => 'admin_upload_goal'],
             ],
             [
                 ['text' => '📋 لیست گل‌ها', 'callback_data' => 'admin_list_goal'],
