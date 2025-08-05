@@ -169,8 +169,7 @@ class BotHandler
             error_log("BotHandler::handleRequest: 'from' field missing for non-start message. Update type might not be a user message.");
         }
 
-        $state = $this->fileHandler->getState($this->chatId);
-
+      
         if (str_starts_with($this->text, "/start")) {
             $isAdmin = $this->db->isAdmin($this->chatId);
             $this->fileHandler->saveState($this->chatId, '');
@@ -186,7 +185,10 @@ class BotHandler
                 ]);
             }
             return;
-        } elseif ($state === 'awaiting_channel_link') {
+        } 
+        $state = $this->fileHandler->getState($this->chatId);
+
+        if ($state === 'awaiting_channel_link') {
             $this->processChannelLink($this->chatId, $this->text);
         }
     }
