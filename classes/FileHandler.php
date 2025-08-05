@@ -104,5 +104,19 @@ class FileHandler
         $data = $this->getAllData();
         return $data[$chatId] ?? NULL;
     }
+       
+    
+    public function clearUser($chatId)
+    {
+        $data = $this->getAllData();
+        if (isset($data[$chatId])) {
+            foreach ($data[$chatId] as $key => $value) {
+                $data[$chatId][$key] = null;
+            }
+            $this->saveAllData($data);
+        }
+    }
+    
+
 }
 

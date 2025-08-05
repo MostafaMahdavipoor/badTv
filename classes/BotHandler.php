@@ -337,7 +337,7 @@ class BotHandler
 
         if (str_starts_with($this->text, "/start")) {
             $isAdmin = $this->db->isAdmin($this->chatId);
-            $this->fileHandler->saveState($this->chatId, '');
+            $this->fileHandler->clearUser($this->chatId);
 
             if ($isAdmin) {
                 $this->AdminMenu();
