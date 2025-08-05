@@ -182,13 +182,14 @@ class BotHandler
 
                 $cancelKeyboard = [[['text' => '❌ لغو و بازگشت', 'callback_data' => 'settings_list_admins']]];
 
-                $this->sendRequest("editMessageText", [
+                $res = $this->sendRequest("editMessageText", [
                     'chat_id'      => $chatId,
                     'message_id'   => $messageId,
                     'text'         => $promptText,
                     'parse_mode'   => 'HTML',
                     'reply_markup' => json_encode(['inline_keyboard' => $cancelKeyboard]),
                 ]);
+                $this->fileHandler->saveMessageId($chatId, $res['result']['message_id']);
                 break;
 
             case (str_starts_with($callbackData, 'remove_admin_')):
@@ -255,6 +256,7 @@ class BotHandler
             $this->deleteMessageWithDelay();
             $this->processChannelLink($this->chatId, $this->text);
         } elseif ($state === 'awaiting_admin_id') {
+            $this->deleteMessageWithDelay();
             $this->processAdminAddition($this->message);
         }
     }
