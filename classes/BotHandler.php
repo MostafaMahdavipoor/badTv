@@ -170,7 +170,7 @@ class BotHandler
                 break;
 
             case 'prompt_add_admin':
-              
+
                 $this->fileHandler->saveState($chatId, 'awaiting_admin_id');
                 $this->fileHandler->saveMessageId($chatId, $messageId);
 
@@ -186,7 +186,7 @@ class BotHandler
                     'chat_id'      => $chatId,
                     'message_id'   => $messageId,
                     'text'         => $promptText,
-                    'parse_mode'   => 'HTML', 
+                    'parse_mode'   => 'HTML',
                     'reply_markup' => json_encode(['inline_keyboard' => $cancelKeyboard]),
                 ]);
                 break;
@@ -294,7 +294,7 @@ class BotHandler
         if (empty($admins)) {
             $text .= "در حال حاضر به جز شما، ادمین دیگری ثبت نشده است.";
         } else {
-            $text .= "لیست ادمین‌های سیستم:";
+            $text .= "برای چت با هر ادمین روی نام او کلیک کنید:";
         }
 
         $inlineKeyboard = [];
@@ -303,27 +303,26 @@ class BotHandler
                 continue;
             }
 
-            $adminName        = $admin['first_name'] ?? ('@' . $admin['username']) ?? $admin['chat_id'];
+            $adminChatId = $admin['chat_id'];
+            $adminName   = $admin['first_name'] ?? ('@' . $admin['username']) ?? $admin['chat_id'];
+
             $inlineKeyboard[] = [
-                ['text' => "👤 " . $adminName, 'url' => 'tg://user?id=' . $admin['chat_id']],
-            
-                ['text' => '❌ حذف', 'callback_data' => 'remove_admin_' . $admin['chat_id']],
+                ['text' => "👤 " . $adminName, 'url' => 'tg://user?id=' . $adminChatId],
+                ['text' => '❌ حذف', 'callback_data' => 'remove_admin_' . $adminChatId],
             ];
         }
 
         $inlineKeyboard[] = [['text' => '➕ افزودن ادمین جدید', 'callback_data' => 'prompt_add_admin']];
         $inlineKeyboard[] = [['text' => '⬅️ بازگشت به تنظیمات', 'callback_data' => 'admin_settings']];
 
-        $res = $this->sendRequest('editMessageText', [
+        $this->sendRequest('editMessageText', [
             'chat_id'      => $chatId,
             'message_id'   => $messageId,
             'text'         => $text,
             'parse_mode'   => 'HTML',
             'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
         ]);
-        error_log('update:' . print_r($res ,true));
     }
-
     private function showChannelsMenu(int $chatId, int $messageId): void
     {
         $channels = $this->db->getAllChannels();
@@ -376,9 +375,9 @@ class BotHandler
             $this->fileHandler->saveState($chatId, 'start');
         } else {
             $this->sendRequest('editMessageText', [
-                'chat_id' => $chatId,
+                'chat_id'      => $chatId,
                 'message_id'   => $messageId,
-                'text'    => "❌ ربات در کانال {$channelIdentifier} ادمین نیست یا کانال وجود ندارد. لطفاً ربات را ادمین کرده و دوباره تلاش کنید.",
+                'text'         => "❌ ربات در کانال {$channelIdentifier} ادمین نیست یا کانال وجود ندارد. لطفاً ربات را ادمین کرده و دوباره تلاش کنید.",
                 'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
             ]);
         }
