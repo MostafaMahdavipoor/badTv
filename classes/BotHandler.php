@@ -244,10 +244,13 @@ class BotHandler
                 $stateData = $this->fileHandler->getUser($chatId);
                 if (isset($stateData['state']) && $stateData['state'] === 'awaiting_caption_confirmation') {
                     $newState = ['state' => 'awaiting_new_caption', 'file_id' => $stateData['file_id'], 'type' => $stateData['type']];
+                    $cancelKeyboard = [[['text' => '❌ لغو', 'callback_data' => 'admin_panel']]];
                     $this->fileHandler->saveUser($chatId, $newState);
                     $this->sendRequest('editMessageText', [
                         'chat_id' => $chatId, 'message_id' => $messageId,
                         'text'    => 'لطفاً کپشن جدید را ارسال کنید.',
+                         'reply_markup' => json_encode(['inline_keyboard' => $cancelKeyboard]),
+        
                     ]);
                 }
                 break;
@@ -353,7 +356,9 @@ class BotHandler
         } elseif ($state === 'awaiting_goal_upload') {
             $this->deleteMessageWithDelay();
             $this->processGoalUpload($this->message);
-        }
+        } elseif ($state === 'awaiting_new_caption') {
+        $this->processNewCaption($this->message);
+    }
     }
     private function processNewCaption(array $message): void
     {
@@ -648,10 +653,12 @@ class BotHandler
         $panelText = "👨‍💻 <b>پنل مدیریت ربات</b>\n\n";
         $panelText .= "ادمین عزیز، خوش آمدید. لطفاً یک گزینه را انتخاب کنید:";
 
-        $inlineKeyboard = [
+        $inlineKeyboard = [     
 
             [
-                ['text' => '⚽ آپلود گل', 'callback_data' => 'admin_upload_goal'],
+                ['text' => '⚽ آپلود گل', 'callback_data' => 'admin_upload_goal']
+            ],
+            [
                 ['text' => '📋 لیست گل‌ها', 'callback_data' => 'admin_list_goal'],
             ],
             [
