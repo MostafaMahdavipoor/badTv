@@ -359,9 +359,9 @@ class BotHandler
         $isAdmin           = $this->checkBotAdminStatus($channelIdentifier);
         $messageId         = $this->fileHandler->getMessageId($chatId);
 
+        $inlineKeyboard[] = [['text' => '⬅️ بازگشت  ', 'callback_data' => 'settings_manage_channels']];
         if ($isAdmin) {
             $this->db->addChannel($channelIdentifier);
-            $inlineKeyboard[] = [['text' => '⬅️ بازگشت  ', 'callback_data' => 'settings_manage_channels']];
 
             $this->sendRequest('editMessageText', [
                 'chat_id'      => $chatId,
@@ -372,9 +372,11 @@ class BotHandler
             ]);
             $this->fileHandler->saveState($chatId, 'start');
         } else {
-            $this->sendRequest('sendMessage', [
+            $this->sendRequest('editMessageText', [
                 'chat_id' => $chatId,
-                'text'    => "❌ خطا: ربات در کانال {$channelIdentifier} ادمین نیست یا کانال وجود ندارد. لطفاً ربات را ادمین کرده و دوباره تلاش کنید.",
+                'message_id'   => $messageId,
+                'text'    => "❌ ربات در کانال {$channelIdentifier} ادمین نیست یا کانال وجود ندارد. لطفاً ربات را ادمین کرده و دوباره تلاش کنید.",
+                'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
             ]);
         }
     }
