@@ -103,18 +103,17 @@ class BotHandler
         }
 
         $state = $this->fileHandler->getState($this->chatId);
-        $text = $this->message['text'] ?? null;
 
-        if ($text === '/start') {
-            $fullName = $this->db->getUserFullName($this->chatId);
-            $welcomeMessage = "سلام {$fullName} عزیز!\n به ربات ما خوش آمدید.";
+        if (str_starts_with($this->text, "/start")) {
+            
             $this->sendRequest("sendMessage", [
-                "chat_id"    => $welcomeMessage,
+                "chat_id"    => $this->chatId,
                 "text"       => "hi :)",
                 "parse_mode" => "HTML",
 
             ]);
-        } 
+            return;
+        }
     }
 
     public function sendRequest($method, $data)
