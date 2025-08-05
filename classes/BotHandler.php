@@ -126,19 +126,16 @@ class BotHandler
                 break;
 
             case 'settings_manage_channels':
+                $this->showChannelsMenu($chatId, $messageId);
+                break;
+            case 'prompt_add_channel':
 
                 $this->fileHandler->saveState($chatId, 'awaiting_channel_link');
+                $this->fileHandler->saveMessageId($chatId, $messageId);
 
                 $promptText = "لطفا لینک یا یوزرنیم کانال مورد نظر را ارسال کنید.\n\n";
-                $promptText .= "مثال:\n";
-                $promptText .= "https://t.me/my_channel\n";
-                $promptText .= "یا\n";
-                $promptText .= "@my_channel\n\n";
                 $promptText .= "<i>⚠️ ربات باید حتما در کانال مورد نظر ادمین باشد.</i>";
-
-                $cancelKeyboard = [
-                    [['text' => '❌ لغو عملیات', 'callback_data' => 'cancel_action']],
-                ];
+                $cancelKeyboard = [[['text' => '❌ لغو و بازگشت', 'callback_data' => 'settings_manage_channels']]];
 
                 $this->sendRequest("editMessageText", [
                     'chat_id'      => $chatId,
@@ -148,8 +145,11 @@ class BotHandler
                     'reply_markup' => json_encode(['inline_keyboard' => $cancelKeyboard]),
                 ]);
                 break;
-
             case 'cancel_action':
+                $this->fileHandler->saveState($chatId, '');
+                $this->AdminMenu($messageId);
+                break;
+            case 'admin_panel':
                 $this->fileHandler->saveState($chatId, '');
                 $this->AdminMenu($messageId);
                 break;
@@ -169,7 +169,6 @@ class BotHandler
             error_log("BotHandler::handleRequest: 'from' field missing for non-start message. Update type might not be a user message.");
         }
 
-      
         if (str_starts_with($this->text, "/start")) {
             $isAdmin = $this->db->isAdmin($this->chatId);
             $this->fileHandler->saveState($this->chatId, '');
@@ -185,7 +184,7 @@ class BotHandler
                 ]);
             }
             return;
-        } 
+        }
         $state = $this->fileHandler->getState($this->chatId);
 
         if ($state === 'awaiting_channel_link') {
@@ -193,6 +192,39 @@ class BotHandler
         }
     }
 
+    private function showChannelsMenu(int $chatId, int $messageId): void
+    {
+        $channels = $this->db->getAllChannels();
+
+        $text = "📢 <b>مدیریت کانال‌ها</b>\n\n";
+        if (empty($channels)) {
+            $text .= "در حال حاضر هیچ کانالی ثبت نشده است.";
+        } else {
+            $text .= "برای حذف هر کانال، روی دکمه ❌ کنار آن کلیک کنید:";
+        }
+
+        $inlineKeyboard = [];
+        foreach ($channels as $channel) {
+            $channelUsername = $channel['username'] ?? 'خطا';
+            $channelId       = $channel['id'] ?? 0;
+
+            $inlineKeyboard[] = [
+                ['text' => $channelUsername, 'url' => 'https://t.me/' . ltrim($channelUsername, '@')],
+                ['text' => '❌', 'callback_data' => 'delete_channel_' . $channelId],
+            ];
+        }
+
+        $inlineKeyboard[] = [['text' => '➕ افزودن کانال جدید', 'callback_data' => 'prompt_add_channel']];
+        $inlineKeyboard[] = [['text' => '⬅️ بازگشت به تنظیمات', 'callback_data' => 'admin_settings']];
+
+        $this->sendRequest('editMessageText', [
+            'chat_id'      => $chatId,
+            'message_id'   => $messageId,
+            'text'         => $text,
+            'parse_mode'   => 'HTML',
+            'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
+        ]);
+    }
     private function processChannelLink(int $chatId, string $channelLink): void
     {
         $channelUsername   = str_replace(['https://t.me/', 't.me/', '@'], '', $channelLink);
@@ -230,7 +262,7 @@ class BotHandler
         ]);
         return $response && $response['ok'] && $response['result']['status'] === 'administrator';
     }
-    public function AdminMenu($messageId =null): void
+    public function AdminMenu($messageId = null): void
     {
         $panelText = "👨‍💻 <b>پنل مدیریت ربات</b>\n\n";
         $panelText .= "ادمین عزیز، خوش آمدید. لطفاً یک گزینه را انتخاب کنید:";
@@ -255,12 +287,12 @@ class BotHandler
                 'inline_keyboard' => $inlineKeyboard,
             ]),
         ];
-        if($messageId == null){
+        if ($messageId == null) {
             $method = 'sendMessage';
-        }else{
+        } else {
             $method = 'editMessageText';
         }
-        $this->sendRequest($method , $data);
+        $this->sendRequest($method, $data);
     }
     public function sendRequest($method, $data)
     {
