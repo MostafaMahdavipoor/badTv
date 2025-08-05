@@ -302,19 +302,27 @@ class BotHandler
                         $caption    = $goal['caption'];
                         $viewButton = [['text' => '👁 مشاهده گل', 'url' => "{$this->botLink}goal_{$goal['token']}"]];
                         foreach ($selectedChannels as $channelName) {
-                            $this->sendRequest($goal['type'] === 'video' ? 'sendVideo' : 'sendAnimation', [
+
+                            $this->sendRequest('sendMessage', [
                                 'chat_id'      => $channelName,
-                                'caption'      => $caption,
-                                'file_id'      => $goal['file_id'],
+                                'text'         => $caption,
+                                'parse_mode'   => 'HTML',
                                 'reply_markup' => json_encode(['inline_keyboard' => $viewButton]),
                             ]);
                         }
 
                         $this->sendRequest('editMessageText', [
-                            'chat_id' => $chatId, 'message_id' => $messageId,
-                            'text'    => '✅ پیام با موفقیت به ' . count($selectedChannels) . ' کانال ارسال شد.',
+                            'chat_id'      => $chatId,
+                            'message_id'   => $messageId,
+                            'text'         => '✅ پیام با موفقیت به ' . count($selectedChannels) . ' کانال ارسال شد.',
+                            'reply_markup' => json_encode([
+                                'inline_keyboard' => [
+                                    [
+                                        ['text' => '⬅️ بازگشت به پنل ادمین', 'callback_data' => 'admin_panel'],
+                                    ],
+                                ],
+                            ]),
                         ]);
-
                         $this->fileHandler->clearUser($chatId);
                     }
                 }
@@ -506,17 +514,17 @@ class BotHandler
 
     private function processAdminAddition(array $message): void
     {
-        if (isset($message['forward_origin'])) {
-            $chatId       = $message['chat']['id'];
-            $errorMessage = "❌ امکان پردازش فایل‌های فوروارد شده وجود ندارد.\n\n" .
-                "لطفاً فایل ویدیو یا گیف را مستقیماً برای ربات آپلود کنید (ارسال از گالری).";
+        // if (isset($message['forward_origin'])) {
+        //     $chatId       = $message['chat']['id'];
+        //     $errorMessage = "❌ امکان پردازش فایل‌های فوروارد شده وجود ندارد.\n\n" .
+        //         "لطفاً فایل ویدیو یا گیف را مستقیماً برای ربات آپلود کنید (ارسال از گالری).";
 
-            $this->sendRequest('sendMessage', [
-                'chat_id' => $chatId,
-                'text'    => $errorMessage,
-            ]);
-            return;
-        }
+        //     $this->sendRequest('sendMessage', [
+        //         'chat_id' => $chatId,
+        //         'text'    => $errorMessage,
+        //     ]);
+        //     return;
+        // }
         $chatId           = $message['chat']['id'];
         $newAdminId       = null;
         $newAdminUsername = null;
