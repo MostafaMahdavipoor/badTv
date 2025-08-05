@@ -80,6 +80,48 @@ class Database
         }
     }
 
+    public function getGoalById(int $goalId)
+    {
+        $stmt = $this->pdo->prepare("SELECT * FROM goals WHERE id = ?");
+        $stmt->execute([$goalId]);
+        return $stmt->fetch();
+    }
+    public function saveGoal(int $chatId, string $fileId, string $type, ?string $caption): ?int
+    {
+        $sql   = "INSERT INTO goals (chat_id, file_id, type, caption, token) VALUES (?, ?, ?, ?, ?)";
+        $token = $this->generateUniqueToken(4);
+
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$chatId, $fileId, $type, $caption, $token]);
+            return (int) $this->pdo->lastInsertId();
+        } catch (PDOException $e) {
+            error_log("❌ Failed to save goal: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function generateUniqueToken(int $length = 5): string
+    {
+        $characters       = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+        $charactersLength = strlen($characters);
+        do {
+            $token = '';
+            for ($i = 0; $i < $length; $i++) {
+                $token .= $characters[random_int(0, $charactersLength - 1)];
+            }
+        } while ($this->tokenExists($token));
+        return $token;
+    }
+
+    private function tokenExists(string $token): bool
+    {
+        $sql  = "SELECT 1 FROM goals WHERE token = ? LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$token]);
+        return $stmt->fetchColumn() !== false;
+    }
+
     public function getAllUsers(): array
     {
         try {

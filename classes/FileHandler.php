@@ -85,5 +85,24 @@ class FileHandler
         $data = $this->getAllData();
         return $data[$chatId]['message_id'] ?? null;
     }
+
+    public function saveUser($chatId, $newUserData)
+    {
+        if (!is_numeric($chatId)) {
+            return ;
+        }
+        $data = $this->getAllData();
+        $existingUser = $data[$chatId] ?? [];
+        foreach ($newUserData as $key => $value) {
+            $existingUser[$key] = $value;
+        }
+        $data[$chatId] = $existingUser;
+        $this->saveAllData($data);
+    }
+    public function getUser($chatId)
+    {
+        $data = $this->getAllData();
+        return $data[$chatId] ?? NULL;
+    }
 }
 

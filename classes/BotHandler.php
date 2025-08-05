@@ -89,9 +89,18 @@ class BotHandler
 
         switch ($callbackData) {
             case 'admin_upload_goal':
+                $this->fileHandler->saveState($chatId, 'awaiting_goal_upload');
+                $this->fileHandler->saveMessageId($chatId, $messageId);
+                $promptText     = "لطفاً ویدیو یا گیف مورد نظر را ارسال یا فوروارد کنید.";
+                $cancelKeyboard = [[['text' => '❌ لغو عملیات', 'callback_data' => 'admin_panel']]];
 
+                $this->sendRequest("editMessageText", [
+                    'chat_id'      => $chatId,
+                    'message_id'   => $messageId,
+                    'text'         => $promptText,
+                    'reply_markup' => json_encode(['inline_keyboard' => $cancelKeyboard]),
+                ]);
                 break;
-
             case 'admin_list_goal':
 
                 break;
@@ -207,7 +216,7 @@ class BotHandler
 
             case (str_starts_with($callbackData, 'show_admin_info_')):
                 $adminIdToShow = substr($callbackData, strlen('show_admin_info_'));
-                $adminInfo     = $this->db->getUserInfo((int) $adminIdToShow); 
+                $adminInfo     = $this->db->getUserInfo((int) $adminIdToShow);
 
                 if ($adminInfo && ! empty($adminInfo['username'])) {
                     $infoText = "برای تماس با این ادمین، از یوزرنیم زیر استفاده کنید:\n@" . $adminInfo['username'];
@@ -216,6 +225,89 @@ class BotHandler
                 }
 
                 $this->answerCallbackQuery($callbackQueryId, $infoText, true);
+                break;
+
+            case 'confirm_caption':
+                $stateData = $this->fileHandler->getUser($chatId);
+                if (isset($stateData['state']) && $stateData['state'] === 'awaiting_caption_confirmation') {
+                    $goalId = $this->db->saveGoal($chatId, $stateData['file_id'], $stateData['type'], $stateData['caption']);
+
+                    if ($goalId) {
+                        $this->showChannelSelectionMenu($chatId, $messageId, $goalId);
+                    }
+
+                    $this->fileHandler->saveState($chatId, '');
+                }
+                break;
+
+            case 'change_caption':
+                $stateData = $this->fileHandler->getUser($chatId);
+                if (isset($stateData['state']) && $stateData['state'] === 'awaiting_caption_confirmation') {
+                    $newState = ['state' => 'awaiting_new_caption', 'file_id' => $stateData['file_id'], 'type' => $stateData['type']];
+                    $this->fileHandler->saveUser($chatId, $newState);
+                    $this->sendRequest('editMessageText', [
+                        'chat_id' => $chatId, 'message_id' => $messageId,
+                        'text'    => 'لطفاً کپشن جدید را ارسال کنید.',
+                    ]);
+                }
+                break;
+
+            case (str_starts_with($callbackData, 'toggle_channel_')):
+
+                list(, $goalId, $channelName) = explode('_', $callbackData, 3);
+
+                $stateData = $this->fileHandler->getUser($chatId)['state'] ?? null;
+                if ($stateData && $stateData['name'] === 'selecting_channels' && $stateData['goal_id'] == $goalId) {
+                    $selectedChannels = $stateData['selected_channels'];
+
+                    if (($key = array_search($channelName, $selectedChannels)) !== false) {
+                        unset($selectedChannels[$key]);
+                    } else {
+                        $selectedChannels[] = $channelName;
+                    }
+
+                    $stateData['selected_channels'] = array_values($selectedChannels);
+                    $this->fileHandler->saveUser($chatId, ['state' => $stateData]);
+
+                    $this->updateChannelSelectionMenu($chatId, $messageId, $goalId, $selectedChannels);
+                }
+                break;
+            // در switch متد handleCallbackQuery
+
+            case (str_starts_with($callbackData, 'send_goal_')):
+                $goalId    = substr($callbackData, strlen('send_goal_'));
+                $stateData = $this->fileHandler->getUser($chatId)['state'] ?? null;
+
+                if ($stateData && $stateData['name'] === 'selecting_channels' && $stateData['goal_id'] == $goalId) {
+                    $selectedChannels = $stateData['selected_channels'];
+
+                    if (empty($selectedChannels)) {
+                        $this->answerCallbackQuery($callbackQueryId, "هیچ کانالی انتخاب نشده است!", true);
+                        break;
+                    }
+
+                    $goal = $this->db->getGoalById((int) $goalId);
+
+                    if ($goal) {
+                        $caption    = $goal['caption'];
+                        $viewButton = [['text' => '👁 مشاهده گل', 'url' => "{$this->botLink}?start={$goal['token']}"]];
+                        foreach ($selectedChannels as $channelName) {
+                            $this->sendRequest($goal['type'] === 'video' ? 'sendVideo' : 'sendAnimation', [
+                                'chat_id'      => $channelName,
+                                'caption'      => $caption,
+                                'file_id'      => $goal['file_id'],
+                                'reply_markup' => json_encode(['inline_keyboard' => $viewButton]),
+                            ]);
+                        }
+
+                        $this->sendRequest('editMessageText', [
+                            'chat_id' => $chatId, 'message_id' => $messageId,
+                            'text'    => '✅ پیام با موفقیت به ' . count($selectedChannels) . ' کانال ارسال شد.',
+                        ]);
+
+                        $this->fileHandler->saveUser($chatId, ['state' => null]);
+                    }
+                }
                 break;
 
         }
@@ -258,6 +350,144 @@ class BotHandler
         } elseif ($state === 'awaiting_admin_id') {
             $this->deleteMessageWithDelay();
             $this->processAdminAddition($this->message);
+        } elseif ($state === 'awaiting_goal_upload') {
+            $this->deleteMessageWithDelay();
+            $this->processGoalUpload($this->message);
+        }
+    }
+    private function processNewCaption(array $message): void
+    {
+        $chatId     = $message['chat']['id'];
+        $newCaption = $message['text'] ?? '';
+
+        $stateData = $this->fileHandler->getUser($chatId);
+
+        if (isset($stateData['state']) && $stateData['state'] === 'awaiting_new_caption') {
+            $goalId = $this->db->saveGoal($chatId, $stateData['file_id'], $stateData['type'], $newCaption);
+
+            if ($goalId) {
+                $this->sendRequest('sendMessage', ['chat_id' => $chatId, 'text' => '✅ گل با کپشن جدید ذخیره شد. حالا کانال‌های مقصد را انتخاب کنید:']);
+                $this->showChannelSelectionMenu($chatId, null, $goalId);
+            }
+
+            $this->fileHandler->saveState($chatId, '');
+        }
+    }
+
+    private function updateChannelSelectionMenu(int $chatId, int $messageId, int $goalId, array $selectedChannels): void
+    {
+        $allChannels    = $this->db->getAllChannels();
+        $inlineKeyboard = [];
+
+        foreach ($allChannels as $channel) {
+            $isChecked        = in_array($channel, $selectedChannels);
+            $icon             = $isChecked ? '✅' : '🔲';
+            $inlineKeyboard[] = [['text' => "{$icon} " . $channel, 'callback_data' => "toggle_channel_{$goalId}_{$channel}"]];
+        }
+
+        $inlineKeyboard[] = [['text' => '✅ ارسال به کانال‌های انتخاب شده', 'callback_data' => "send_goal_{$goalId}"]];
+        $inlineKeyboard[] = [['text' => '❌ لغو', 'callback_data' => 'admin_panel']];
+
+        $this->sendRequest('editMessageReplyMarkup', [
+            'chat_id'      => $chatId,
+            'message_id'   => $messageId,
+            'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
+        ]);
+    }
+
+    private function showChannelSelectionMenu(int $chatId, ?int $messageId, int $goalId): void
+    {
+
+        $stateData = [
+            'state'             => 'selecting_channels',
+            'goal_id'           => $goalId,
+            'selected_channels' => [],
+        ];
+        $this->fileHandler->saveUser($chatId, ['state' => $stateData]);
+        $allChannels = $this->db->getAllChannels();
+        $text        = "لطفاً کانال‌های مورد نظر برای ارسال را انتخاب کنید:";
+
+        $inlineKeyboard = [];
+        foreach ($allChannels as $channel) {
+            $inlineKeyboard[] = [['text' => "🔲 " . $channel, 'callback_data' => "toggle_channel_{$goalId}_{$channel}"]];
+        }
+
+        $inlineKeyboard[] = [['text' => '✅ ارسال به کانال‌های انتخاب شده', 'callback_data' => "send_goal_{$goalId}"]];
+        $inlineKeyboard[] = [['text' => '❌ لغو', 'callback_data' => 'admin_panel']];
+
+        $data = [
+            'chat_id'      => $chatId,
+            'text'         => $text,
+            'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
+        ];
+
+        if ($messageId) {
+            $data['message_id'] = $messageId;
+            $this->sendRequest('editMessageText', $data);
+        } else {
+            $this->sendRequest('sendMessage', $data);
+        }
+    }
+
+    private function processGoalUpload(array $message): void
+    {
+
+        $chatId          = $message['chat']['id'];
+        $fileId          = null;
+        $fileType        = null;
+        $existingCaption = $message['caption'] ?? null;
+
+        if (isset($message['video'])) {
+            $fileId   = $message['video']['file_id'];
+            $fileType = 'video';
+        } elseif (isset($message['animation'])) {
+            $fileId   = $message['animation']['file_id'];
+            $fileType = 'gif';
+        }
+
+        if ($fileId === null) {
+            $this->sendRequest('sendMessage', ['chat_id' => $chatId, 'text' => '❌ لطفاً فقط ویدیو یا گیف ارسال کنید.']);
+            return;
+        }
+
+        $messageIdToEdit = $this->fileHandler->getMessageId($chatId);
+
+        if ($existingCaption !== null) {
+
+            $newState = [
+                'state'   => 'awaiting_caption_confirmation',
+                'file_id' => $fileId,
+                'type'    => $fileType,
+                'caption' => $existingCaption,
+            ];
+            $this->fileHandler->saveUser($chatId, $newState);
+
+            $promptText      = "یک کپشن برای این فایل شناسایی شد:\n\n<code>" . htmlspecialchars($existingCaption) . "</code>\n\nآیا از همین کپشن استفاده شود؟";
+            $confirmKeyboard = [
+                [['text' => '✅ بله، همین خوبه', 'callback_data' => 'confirm_caption']],
+                [['text' => '✏️ نه، تغییرش میدم', 'callback_data' => 'change_caption']],
+            ];
+
+            $this->sendRequest('editMessageText', [
+                'chat_id'      => $chatId,
+                'message_id'   => $messageIdToEdit,
+                'text'         => $promptText,
+                'parse_mode'   => 'HTML',
+                'reply_markup' => json_encode(['inline_keyboard' => $confirmKeyboard]),
+            ]);
+        } else {
+
+            $newState = [
+                'state'   => 'awaiting_new_caption',
+                'file_id' => $fileId, 'type' => $fileType];
+            $this->fileHandler->saveUser($chatId, $newState);
+
+            $promptText = "✅ فایل دریافت شد. اکنون کپشن مورد نظر خود را برای آن ارسال کنید.";
+            $this->sendRequest('editMessageText', [
+                'chat_id'    => $chatId,
+                'message_id' => $messageIdToEdit,
+                'text'       => $promptText,
+            ]);
         }
     }
 
