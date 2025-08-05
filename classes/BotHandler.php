@@ -361,7 +361,7 @@ class BotHandler
             $this->deleteMessageWithDelay();
             $this->processAdminAddition($this->message);
         } elseif ($state === 'awaiting_goal_upload') {
-            $this->بظ();
+            $this->deleteMessageWithDelay();
             $this->processGoalUpload($this->message);
         } elseif ($state === 'awaiting_new_caption') {
             $this->deleteMessageWithDelay();
@@ -379,8 +379,8 @@ class BotHandler
             $goalId = $this->db->saveGoal($chatId, $stateData['file_id'], $stateData['type'], $newCaption);
 
             if ($goalId) {
-               $messageIdToEdit = $this->fileHandler->getMessageId($chatId);
-               $this->showChannelSelectionMenu($chatId, $messageIdToEdit, $goalId);
+                $messageIdToEdit = $this->fileHandler->getMessageId($chatId);
+                $this->showChannelSelectionMenu($chatId, $messageIdToEdit, $goalId);
             }
         }
     }
@@ -506,6 +506,17 @@ class BotHandler
 
     private function processAdminAddition(array $message): void
     {
+        if (isset($message['forward_origin'])) {
+            $chatId       = $message['chat']['id'];
+            $errorMessage = "❌ امکان پردازش فایل‌های فوروارد شده وجود ندارد.\n\n" .
+                "لطفاً فایل ویدیو یا گیف را مستقیماً برای ربات آپلود کنید (ارسال از گالری).";
+
+            $this->sendRequest('sendMessage', [
+                'chat_id' => $chatId,
+                'text'    => $errorMessage,
+            ]);
+            return;
+        }
         $chatId           = $message['chat']['id'];
         $newAdminId       = null;
         $newAdminUsername = null;
