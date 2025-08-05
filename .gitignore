@@ -1,28 +1,28 @@
 
-cache/
-logs/
-*.tmp
-*.bak
-*.swp
-error_log
-log.txt
-cronjobs/error_log
+# cache/
+# logs/
+# *.tmp
+# *.bak
+# *.swp
+# error_log
+# log.txt
+# cronjobs/error_log
 
 
-*.json
+# *.json
 
 
-vendor/
-composer.lock
-composer.phar
+# vendor/
+# composer.lock
+# composer.phar
 
 
-assets/styles/*.php
+# assets/styles/*.php
 
 
-.idea/
-*.iml
-.DS_Store
+# .idea/
+# *.iml
+# .DS_Store
 
 
-.env
+# .env
