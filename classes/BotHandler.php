@@ -287,7 +287,7 @@ class BotHandler
                 $goalId    = substr($callbackData, strlen('send_goal_'));
                 $stateData = $this->fileHandler->getUser($chatId)['state'] ?? null;
 
-                if ($stateData && $stateData['name'] === 'selecting_channels' && $stateData['goal_id'] == $goalId) {
+                if ($stateData && $stateData['state'] === 'selecting_channels' && $stateData['goal_id'] == $goalId) {
                     $selectedChannels = $stateData['selected_channels'];
 
                     if (empty($selectedChannels)) {
