@@ -411,10 +411,10 @@ class BotHandler
     {
 
         $stateData = [
-            'state'             => 'selecting_channels',
             'goal_id'           => $goalId,
             'selected_channels' => [],
         ];
+        $this->fileHandler->saveState($chatId, 'selecting_channels');
         $this->fileHandler->saveUser($chatId, $stateData);
         $allChannels = $this->db->getAllChannels();
         $text        = "لطفاً کانال‌های مورد نظر برای ارسال را انتخاب کنید:";
