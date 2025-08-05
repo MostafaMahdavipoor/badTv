@@ -244,12 +244,14 @@ class BotHandler
                     $newState       = ['state' => 'awaiting_new_caption', 'file_id' => $stateData['file_id'], 'type' => $stateData['type']];
                     $cancelKeyboard = [[['text' => '❌ لغو', 'callback_data' => 'admin_panel']]];
                     $this->fileHandler->saveUser($chatId, $newState);
-                    $this->sendRequest('editMessageText', [
+                    $res = $this->sendRequest('editMessageText', [
                         'chat_id'      => $chatId, 'message_id' => $messageId,
                         'text'         => 'لطفاً کپشن جدید را ارسال کنید.',
                         'reply_markup' => json_encode(['inline_keyboard' => $cancelKeyboard]),
 
                     ]);
+
+                    $this->fileHandler->saveMessageId($chatId, $res['result']['message_id']);
                 }
                 break;
 
@@ -362,6 +364,7 @@ class BotHandler
             $this->deleteMessageWithDelay();
             $this->processGoalUpload($this->message);
         } elseif ($state === 'awaiting_new_caption') {
+            $this->deleteMessageWithDelay();
             $this->processNewCaption($this->message);
         }
     }
@@ -376,8 +379,7 @@ class BotHandler
             $goalId = $this->db->saveGoal($chatId, $stateData['file_id'], $stateData['type'], $newCaption);
 
             if ($goalId) {
-                $this->sendRequest('sendMessage', ['chat_id' => $chatId, 'text' => '✅ گل با کپشن جدید ذخیره شد. حالا کانال‌های مقصد را انتخاب کنید:']);
-                $this->showChannelSelectionMenu($chatId, null, $goalId);
+               $this->showChannelSelectionMenu($chatId, null, $goalId);
             }
         }
     }
@@ -491,11 +493,13 @@ class BotHandler
             $this->fileHandler->saveUser($chatId, $newState);
 
             $promptText = "✅ فایل دریافت شد. اکنون کپشن مورد نظر خود را برای آن ارسال کنید.";
-            $this->sendRequest('editMessageText', [
+            $res        = $this->sendRequest('editMessageText', [
                 'chat_id'    => $chatId,
                 'message_id' => $messageIdToEdit,
                 'text'       => $promptText,
             ]);
+
+            $this->fileHandler->saveMessageId($chatId, $res['result']['message_id']);
         }
     }
 
