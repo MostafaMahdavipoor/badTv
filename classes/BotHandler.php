@@ -31,7 +31,6 @@ class BotHandler
         $this->botLink                = $config['bot']['bot_link'];
         $this->zarinpalPaymentHandler = new ZarinpalPaymentHandler();
     }
-
     public function deleteMessageWithDelay(): void
     {
         $this->sendRequest("deleteMessage", [
@@ -39,7 +38,6 @@ class BotHandler
             "message_id" => $this->messageId,
         ]);
     }
-
     public function handleSuccessfulPayment($update): void
     {
         $userLanguage = $this->db->getUserLanguage($this->chatId);
@@ -49,7 +47,6 @@ class BotHandler
             $successfulPayment = $update['message']['successful_payment'];
         }
     }
-
     public function handlePreCheckoutQuery($update): void
     {
         if (isset($update['pre_checkout_query'])) {
@@ -71,7 +68,6 @@ class BotHandler
             file_put_contents('log.txt', date('Y-m-d H:i:s') . " - answerPreCheckoutQuery Response: " . print_r(json_decode($response, true), true) . "\n", FILE_APPEND);
         }
     }
-
     public function handleCallbackQuery($callbackQuery): void
     {
         $callbackData    = $callbackQuery["data"] ?? null;
@@ -90,12 +86,83 @@ class BotHandler
             error_log("Callback query missing required data.");
             return;
         }
+
+        switch ($callbackData) {
+            case 'admin_upload_goal':
+
+                break;
+
+            case 'admin_list_goal':
+
+                break;
+
+            case 'admin_settings':
+                $settingsText = "⚙️ <b>بخش تنظیمات</b>\n\n";
+                $settingsText .= "لطفاً یکی از گزینه‌های زیر را انتخاب کنید:";
+
+                $settingsKeyboard = [
+                    [
+                        ['text' => '➕ افزودن ادمین', 'callback_data' => 'settings_add_admin'],
+                        ['text' => '👥 لیست ادمین‌ها', 'callback_data' => 'settings_list_admins'],
+                    ],
+                    [
+                        ['text' => '📢 مدیریت کانال‌ها', 'callback_data' => 'settings_manage_channels'],
+                    ],
+                    [
+                        ['text' => '⬅️ بازگشت به پنل ادمین', 'callback_data' => 'admin_panel'],
+                    ],
+                ];
+
+                $this->sendRequest("editMessageText", [
+                    'chat_id'      => $chatId,
+                    'message_id'   => $messageId,
+                    'text'         => $settingsText,
+                    'parse_mode'   => 'HTML',
+                    'reply_markup' => json_encode([
+                        'inline_keyboard' => $settingsKeyboard,
+                    ]),
+                ]);
+
+                break;
+
+            case 'settings_manage_channels':
+
+                $this->fileHandler->saveState($chatId, 'awaiting_channel_link');
+
+                $promptText = "لطفا لینک یا یوزرنیم کانال مورد نظر را ارسال کنید.\n\n";
+                $promptText .= "مثال:\n";
+                $promptText .= "https://t.me/my_channel\n";
+                $promptText .= "یا\n";
+                $promptText .= "@my_channel\n\n";
+                $promptText .= "<i>⚠️ ربات باید حتما در کانال مورد نظر ادمین باشد.</i>";
+
+                $cancelKeyboard = [
+                    [['text' => '❌ لغو عملیات', 'callback_data' => 'cancel_action']],
+                ];
+
+                $this->sendRequest("editMessageText", [
+                    'chat_id'      => $chatId,
+                    'message_id'   => $messageId,
+                    'text'         => $promptText,
+                    'parse_mode'   => 'HTML',
+                    'reply_markup' => json_encode(['inline_keyboard' => $cancelKeyboard]),
+                ]);
+                break;
+
+            case 'cancel_action':
+                $this->fileHandler->saveState($chatId, '');
+                $this->AdminMenu($chatId);
+                break;
+        }
+
     }
     public function handleInlineQuery(): void
-    {}
+    {
+
+    }
     public function handleRequest(): void
     {
-        
+
         if (isset($this->message["from"])) {
             $this->db->saveUser($this->message["from"]);
         } else {
@@ -105,17 +172,89 @@ class BotHandler
         $state = $this->fileHandler->getState($this->chatId);
 
         if (str_starts_with($this->text, "/start")) {
-            
-            $this->sendRequest("sendMessage", [
-                "chat_id"    => $this->chatId,
-                "text"       => "hi :)",
-                "parse_mode" => "HTML",
+            $isAdmin = $this->db->isAdmin($this->chatId);
+            $this->fileHandler->saveState($this->chatId, '');
 
-            ]);
+            if ($isAdmin) {
+                $this->AdminMenu($this->chatId);
+            } else {
+                $this->sendRequest("sendMessage", [
+                    "chat_id"    => $this->chatId,
+                    "text"       => "hi :)",
+                    "parse_mode" => "HTML",
+
+                ]);
+            }
             return;
+        } elseif ($state === 'awaiting_channel_link') {
+            $this->processChannelLink($chatId, $text);
         }
     }
 
+    private function processChannelLink(int $chatId, string $channelLink): void
+    {
+        $channelUsername   = str_replace(['https://t.me/', 't.me/', '@'], '', $channelLink);
+        $channelIdentifier = '@' . $channelUsername;
+        $isAdmin           = $this->checkBotAdminStatus($channelIdentifier);
+
+        if ($isAdmin) {
+            $this->db->addChannel($channelIdentifier);
+
+            $this->sendRequest('sendMessage', [
+                'chat_id' => $chatId,
+                'text'    => "✅ کانال {$channelIdentifier} با موفقیت اضافه شد.",
+            ]);
+            $this->fileHandler->saveState($chatId, 'start');
+        } else {
+            $this->sendRequest('sendMessage', [
+                'chat_id' => $chatId,
+                'text'    => "❌ خطا: ربات در کانال {$channelIdentifier} ادمین نیست یا کانال وجود ندارد. لطفاً ربات را ادمین کرده و دوباره تلاش کنید.",
+            ]);
+        }
+    }
+
+    private function checkBotAdminStatus(string $channelIdentifier): bool
+    {
+
+        $botInfo = $this->sendRequest('getMe', []);
+        if (! $botInfo || ! $botInfo['ok']) {
+            error_log("Could not get bot info (getMe)");
+            return false;
+        }
+        $botId    = $botInfo['result']['id'];
+        $response = $this->sendRequest('getChatMember', [
+            'chat_id' => $channelIdentifier,
+            'user_id' => $botId,
+        ]);
+        return $response && $response['ok'] && $response['result']['status'] === 'administrator';
+    }
+    public function AdminMenu(int $chatId): void
+    {
+        $panelText = "👨‍💻 <b>پنل مدیریت ربات</b>\n\n";
+        $panelText .= "ادمین عزیز، خوش آمدید. لطفاً یک گزینه را انتخاب کنید:";
+
+        $inlineKeyboard = [
+
+            [
+                ['text' => '⚽ آپلود گل', 'callback_data' => 'admin_upload_goal'],
+                ['text' => '📋 لیست گل‌ها', 'callback_data' => 'admin_list_goal'],
+            ],
+            [
+                ['text' => '⚙️ تنظیمات', 'callback_data' => 'admin_settings'],
+            ],
+        ];
+
+        $data = [
+            'chat_id'      => $chatId,
+            'message_id'   => $this->messageId,
+            'text'         => $panelText,
+            'parse_mode'   => 'HTML',
+            'reply_markup' => json_encode([
+                'inline_keyboard' => $inlineKeyboard,
+            ]),
+        ];
+        $this->sendRequest("editMessageText", $data);
+    }
     public function sendRequest($method, $data)
     {
         $url = "https://api.telegram.org/bot" . $this->botToken . "/$method";
@@ -140,7 +279,6 @@ class BotHandler
             return false;
         }
     }
-
     private function logTelegramRequest($method, $data, $response, $httpCode, $curlError = null): void
     {
         $logData = [

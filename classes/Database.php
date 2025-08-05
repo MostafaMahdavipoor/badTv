@@ -1,10 +1,9 @@
 <?php
-
 namespace Bot;
 
+use Config\AppConfig;
 use PDO;
 use PDOException;
-use Config\AppConfig;
 
 class Database
 {
@@ -13,15 +12,15 @@ class Database
 
     public function __construct()
     {
-        $config = AppConfig::getConfig();
+        $config        = AppConfig::getConfig();
         $this->botLink = $config['bot']['bot_link'];
-        $dbConfig = $config['database'];
+        $dbConfig      = $config['database'];
 
-        $dsn = "mysql:host={$dbConfig['host']};dbname={$dbConfig['database']};charset=utf8mb4";
+        $dsn     = "mysql:host={$dbConfig['host']};dbname={$dbConfig['database']};charset=utf8mb4";
         $options = [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION, // پرتاب استثنا در زمان خطا
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,   // دریافت نتایج به صورت آرایه انجمنی
-            PDO::ATTR_EMULATE_PREPARES   => false,              // استفاده از prepare واقعی دیتابیس
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,       // دریافت نتایج به صورت آرایه انجمنی
+            PDO::ATTR_EMULATE_PREPARES   => false,                  // استفاده از prepare واقعی دیتابیس
         ];
 
         try {
@@ -43,13 +42,13 @@ class Database
         $stmt->execute([$user['id']]);
 
         if ($stmt->fetchColumn() === false) { // اگر کاربر وجود نداشت
-            $username = $user['username'] ?? '';
+            $username  = $user['username'] ?? '';
             $firstName = $user['first_name'] ?? '';
-            $lastName = $user['last_name'] ?? '';
-            $language = $user['language_code'] ?? 'en';
+            $lastName  = $user['last_name'] ?? '';
+            $language  = $user['language_code'] ?? 'en';
 
             $stmt = $this->pdo->prepare("
-                INSERT INTO users (chat_id, username, first_name, last_name, language, last_activity, entry_token) 
+                INSERT INTO users (chat_id, username, first_name, last_name, language, last_activity, entry_token)
                 VALUES (?, ?, ?, ?, ?, NOW(), ?)
             ");
             $stmt->execute([
@@ -58,16 +57,16 @@ class Database
                 $firstName,
                 $lastName,
                 $language,
-                $entryToken
+                $entryToken,
             ]);
         } else { // اگر کاربر وجود داشت
-            $username = $user['username'] ?? '';
+            $username  = $user['username'] ?? '';
             $firstName = $user['first_name'] ?? '';
-            $lastName = $user['last_name'] ?? '';
-            $language = $user['language_code'] ?? 'en';
+            $lastName  = $user['last_name'] ?? '';
+            $language  = $user['language_code'] ?? 'en';
 
             $stmt = $this->pdo->prepare("
-                UPDATE users 
+                UPDATE users
                 SET username = ?, first_name = ?, last_name = ?, language = ?, last_activity = NOW()
                 WHERE chat_id = ?
             ");
@@ -76,7 +75,7 @@ class Database
                 $firstName,
                 $lastName,
                 $language,
-                $user['id']
+                $user['id'],
             ]);
         }
     }
@@ -96,6 +95,84 @@ class Database
     {
         $stmt = $this->pdo->query("SELECT id, chat_id, username FROM users WHERE is_admin = 1");
         return $stmt->fetchAll();
+    }
+
+    public function isAdmin($chatId): bool
+    {
+        $stmt = $this->pdo->prepare("SELECT is_admin FROM users WHERE chat_id = ?");
+        $stmt->execute([$chatId]);
+        $user = $stmt->fetch();
+        return $user && $user['is_admin'] == 1;
+    }
+
+    public function addChannel(string $channelUsername): bool
+    {
+        $settingsKey = 'registered_channels';
+        $channels    = $this->getSetting($settingsKey, []);
+        if (in_array($channelUsername, $channels)) {
+            return true;
+        }
+        $channels[] = $channelUsername;
+        return $this->saveSetting($settingsKey, $channels, 'لیست کانال‌های ثبت شده در ربات');
+    }
+
+    public function getAllChannels(): array
+    {
+        return $this->getSetting('registered_channels', []);
+    }
+    public function deleteChannel(string $channelUsername): bool
+    {
+        $settingsKey = 'registered_channels';
+        $channels    = $this->getSetting($settingsKey, []);
+        if (! in_array($channelUsername, $channels)) {
+            return true;
+        }
+        $updatedChannels = array_diff($channels, [$channelUsername]);
+        $updatedChannels = array_values($updatedChannels);
+        return $this->saveSetting($settingsKey, $updatedChannels, 'لیست کانال‌های ثبت شده در ربات');
+    }
+
+    public function saveSetting(string $key, $value, ?string $description = null): bool
+    {
+        if (is_bool($value)) {
+            $value = $value ? 1 : 0;
+        } elseif (is_array($value) || is_object($value)) {
+            $value = json_encode($value, JSON_UNESCAPED_UNICODE);
+        }
+
+        $sql = "
+            INSERT INTO settings (`key`, `value`, `description`)
+            VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                `value` = VALUES(`value`),
+                `description` = VALUES(`description`),
+                `updated_at` = NOW()
+        ";
+
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            return $stmt->execute([$key, $value, $description]);
+        } catch (PDOException $e) {
+            error_log("❌ Failed to save setting '{$key}': " . $e->getMessage());
+            return false;
+        }
+    }
+    public function getSetting(string $key, $default = null)
+    {
+        $stmt = $this->pdo->prepare("SELECT `value` FROM settings WHERE `key` = ?");
+        $stmt->execute([$key]);
+        $setting = $stmt->fetch();
+
+        if ($setting === false) {
+            return $default;
+        }
+
+        $value        = $setting['value'];
+        $decodedValue = json_decode($value, true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            return $decodedValue;
+        }
+        return $value;
     }
 
     public function getUsernameByChatId($chatId)
@@ -133,7 +210,7 @@ class Database
             $stmt = $this->pdo->prepare("SELECT username, first_name, last_name FROM users WHERE chat_id = ?");
             $stmt->execute([$chatId]);
             $user = $stmt->fetch();
-            if (!$user) {
+            if (! $user) {
                 error_log("User not found for chat_id: {$chatId}");
                 return null;
             }
@@ -150,7 +227,7 @@ class Database
             $stmt = $this->pdo->prepare("SELECT * FROM users WHERE chat_id = ?");
         } else {
             $identifier = ltrim($identifier, '@');
-            $stmt = $this->pdo->prepare("SELECT * FROM users WHERE username = ?");
+            $stmt       = $this->pdo->prepare("SELECT * FROM users WHERE username = ?");
         }
         $stmt->execute([$identifier]);
         return $stmt->fetch();
@@ -168,7 +245,7 @@ class Database
     {
         try {
             $query = "SELECT * FROM users ORDER BY id ASC LIMIT :limit OFFSET :offset";
-            $stmt = $this->pdo->prepare($query);
+            $stmt  = $this->pdo->prepare($query);
             $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
             $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
             $stmt->execute();
@@ -183,21 +260,13 @@ class Database
     {
         try {
             $query = "UPDATE users SET status = ? WHERE chat_id = ?";
-            $stmt = $this->pdo->prepare($query);
+            $stmt  = $this->pdo->prepare($query);
             $stmt->execute([$status, $chatId]);
             return $stmt->rowCount() > 0; // rowCount تعداد ردیف‌های تحت تاثیر را برمی‌گرداند
         } catch (PDOException $e) {
             error_log("Error updating status for User ID: $chatId - " . $e->getMessage());
             return false;
         }
-    }
-
-    public function isAdmin($chatId): bool
-    {
-        $stmt = $this->pdo->prepare("SELECT is_admin FROM users WHERE chat_id = ?");
-        $stmt->execute([$chatId]);
-        $user = $stmt->fetch();
-        return $user && $user['is_admin'] == 1;
     }
 
     public function getUserByUserId($userId)
