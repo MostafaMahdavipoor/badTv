@@ -91,7 +91,7 @@ class BotHandler
             case 'admin_upload_goal':
                 $this->fileHandler->saveState($chatId, 'awaiting_goal_upload');
                 $this->fileHandler->saveMessageId($chatId, $messageId);
-                $promptText     = "لطفاً ویدیو یا گیف مورد نظر را ارسال یا فوروارد کنید.";
+                $promptText     = "لطفاً ویدیو یا گیف مورد نظر را ارسال کنید.";
                 $cancelKeyboard = [[['text' => '❌ لغو عملیات', 'callback_data' => 'admin_panel']]];
 
                 $this->sendRequest("editMessageText", [
@@ -300,7 +300,7 @@ class BotHandler
 
                     if ($goal) {
                         $caption    = $goal['caption'];
-                        $viewButton = [['text' => '👁 مشاهده گل', 'url' => "{$this->botLink}?start={$goal['token']}"]];
+                        $viewButton = [['text' => '👁 مشاهده گل', 'url' => "{$this->botLink}goal_{$goal['token']}"]];
                         foreach ($selectedChannels as $channelName) {
                             $this->sendRequest($goal['type'] === 'video' ? 'sendVideo' : 'sendAnimation', [
                                 'chat_id'      => $channelName,
@@ -361,7 +361,7 @@ class BotHandler
             $this->deleteMessageWithDelay();
             $this->processAdminAddition($this->message);
         } elseif ($state === 'awaiting_goal_upload') {
-            $this->deleteMessageWithDelay();
+            $this->بظ();
             $this->processGoalUpload($this->message);
         } elseif ($state === 'awaiting_new_caption') {
             $this->deleteMessageWithDelay();
