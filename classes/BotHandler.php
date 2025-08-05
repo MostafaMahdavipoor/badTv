@@ -762,9 +762,9 @@ class BotHandler
             [
                 ['text' => '⚽ آپلود گل', 'callback_data' => 'admin_upload_goal'],
             ],
-            [
-                ['text' => '📋 لیست گل‌ها', 'callback_data' => 'admin_list_goal'],
-            ],
+            // [
+            //     ['text' => '📋 لیست گل‌ها', 'callback_data' => 'admin_list_goal'],
+            // ],
             [
                 ['text' => '⚙️ تنظیمات', 'callback_data' => 'admin_settings'],
             ],
