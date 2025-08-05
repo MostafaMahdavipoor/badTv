@@ -304,7 +304,8 @@ class BotHandler
 
             $adminName        = $admin['first_name'] ?? ('@' . $admin['username']) ?? $admin['chat_id'];
             $inlineKeyboard[] = [
-                ['text' => "👤 " . $adminName, 'callback_data' => 'admin_info_' . $admin['chat_id']],
+                ['text' => "👤 " . $adminName, 'url' => 'tg://user?id=' . $admin['chat_id']],
+            
                 ['text' => '❌ حذف', 'callback_data' => 'remove_admin_' . $admin['chat_id']],
             ];
         }
