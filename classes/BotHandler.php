@@ -379,7 +379,8 @@ class BotHandler
             $goalId = $this->db->saveGoal($chatId, $stateData['file_id'], $stateData['type'], $newCaption);
 
             if ($goalId) {
-               $this->showChannelSelectionMenu($chatId, null, $goalId);
+               $messageIdToEdit = $this->fileHandler->getMessageId($chatId);
+               $this->showChannelSelectionMenu($chatId, $messageIdToEdit, $goalId);
             }
         }
     }
