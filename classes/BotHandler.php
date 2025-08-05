@@ -151,7 +151,7 @@ class BotHandler
 
             case 'cancel_action':
                 $this->fileHandler->saveState($chatId, '');
-                $this->AdminMenu($chatId);
+                $this->AdminMenu($messageId);
                 break;
         }
 
@@ -175,7 +175,7 @@ class BotHandler
             $this->fileHandler->saveState($this->chatId, '');
 
             if ($isAdmin) {
-                $this->AdminMenu($this->chatId);
+                $this->AdminMenu();
             } else {
                 $this->sendRequest("sendMessage", [
                     "chat_id"    => $this->chatId,
@@ -230,7 +230,7 @@ class BotHandler
         ]);
         return $response && $response['ok'] && $response['result']['status'] === 'administrator';
     }
-    public function AdminMenu(int $chatId): void
+    public function AdminMenu($messageId =null): void
     {
         $panelText = "👨‍💻 <b>پنل مدیریت ربات</b>\n\n";
         $panelText .= "ادمین عزیز، خوش آمدید. لطفاً یک گزینه را انتخاب کنید:";
@@ -247,7 +247,7 @@ class BotHandler
         ];
 
         $data = [
-            'chat_id'      => $chatId,
+            'chat_id'      => $this->chatId,
             'message_id'   => $this->messageId,
             'text'         => $panelText,
             'parse_mode'   => 'HTML',
@@ -255,7 +255,12 @@ class BotHandler
                 'inline_keyboard' => $inlineKeyboard,
             ]),
         ];
-        $this->sendRequest("editMessageText", $data);
+        if($messageId == null){
+            $method = 'sendMessage';
+        }else{
+            $method = 'editMessageText';
+        }
+        $this->sendRequest($method , $data);
     }
     public function sendRequest($method, $data)
     {

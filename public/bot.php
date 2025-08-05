@@ -11,7 +11,7 @@ $config = AppConfig::getConfig();
 
 
 $update = json_decode(file_get_contents('php://input'), true);
-error_log('update:' . print_r($update ,true));
+// error_log('update:' . print_r($update ,true));
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
