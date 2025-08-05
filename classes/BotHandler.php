@@ -137,13 +137,14 @@ class BotHandler
                 $promptText .= "<i>⚠️ ربات باید حتما در کانال مورد نظر ادمین باشد.</i>";
                 $cancelKeyboard = [[['text' => '❌ لغو و بازگشت', 'callback_data' => 'settings_manage_channels']]];
 
-                $this->sendRequest("editMessageText", [
+                $res = $this->sendRequest("editMessageText", [
                     'chat_id'      => $chatId,
                     'message_id'   => $messageId,
                     'text'         => $promptText,
                     'parse_mode'   => 'HTML',
                     'reply_markup' => json_encode(['inline_keyboard' => $cancelKeyboard]),
                 ]);
+                $this->fileHandler->saveMessageId($chatId, $res['result']['message_id']);
                 break;
             case 'cancel_action':
                 $this->fileHandler->saveState($chatId, '');
@@ -188,6 +189,7 @@ class BotHandler
         $state = $this->fileHandler->getState($this->chatId);
 
         if ($state === 'awaiting_channel_link') {
+            $this->deleteMessageWithDelay();
             $this->processChannelLink($this->chatId, $this->text);
         }
     }
@@ -230,13 +232,18 @@ class BotHandler
         $channelUsername   = str_replace(['https://t.me/', 't.me/', '@'], '', $channelLink);
         $channelIdentifier = '@' . $channelUsername;
         $isAdmin           = $this->checkBotAdminStatus($channelIdentifier);
+        $messageId = $this->fileHandler->getMessageId($chatId);
 
         if ($isAdmin) {
             $this->db->addChannel($channelIdentifier);
+            $inlineKeyboard[] = [['text' => '⬅️ بازگشت  ', 'callback_data' => 'settings_manage_channels']];
 
-            $this->sendRequest('sendMessage', [
+            $this->sendRequest('editMessageText', [
                 'chat_id' => $chatId,
+                'message_id'   => $messageId,
                 'text'    => "✅ کانال {$channelIdentifier} با موفقیت اضافه شد.",
+                'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
+
             ]);
             $this->fileHandler->saveState($chatId, 'start');
         } else {
