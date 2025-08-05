@@ -327,6 +327,13 @@ class BotHandler
                 }
                 break;
 
+            case (str_starts_with($callbackData, 'check_join_')):
+
+                $this->answerCallbackQuery($callbackQueryId);
+                $token = substr($callbackData, strlen('check_join_'));
+                $this->handleGoalStart($token);
+                break;
+
         }
 
     }
@@ -344,6 +351,15 @@ class BotHandler
         }
 
         if (str_starts_with($this->text, "/start")) {
+
+            $parts = explode(' ', $this->text, 2);
+
+            if (isset($parts[1]) && str_starts_with($parts[1], 'goal_')) {
+                $token = substr($parts[1], strlen('goal_'));
+                $this->handleGoalStart($token);
+                return;
+            }
+
             $isAdmin = $this->db->isAdmin($this->chatId);
             $this->fileHandler->clearUser($this->chatId);
 
@@ -392,6 +408,68 @@ class BotHandler
         }
     }
 
+    private function handleGoalStart(string $token): void
+    {
+        $goal = $this->db->getGoalByToken($token);
+        if (! $goal) {
+            $this->sendRequest("sendMessage", ["chat_id" => $this->chatId, "text" => "❌ محتوای مورد نظر یافت نشد یا منقضی شده است."]);
+            return;
+        }
+
+        $requiredChannels  = $this->db->getAllChannels();
+        $notJoinedChannels = [];
+        foreach ($requiredChannels as $channel) {
+            $response = $this->sendRequest('getChatMember', [
+                'chat_id' => $channel,
+                'user_id' => $this->chatId,
+            ]);
+            if (! $response['ok'] || ! in_array($response['result']['status'], ['member', 'administrator', 'creator'])) {
+                $notJoinedChannels[] = $channel;
+            }
+        }
+
+        if (empty($notJoinedChannels)) {
+            $this->sendGoalToUser($goal);
+        } else {
+            $this->promptUserToJoin($notJoinedChannels, $token);
+        }
+    }
+
+    private function sendGoalToUser(array $goal): void
+    {
+        $response = $this->sendRequest($goal['type'] === 'video' ? 'sendVideo' : 'sendAnimation', [
+            'chat_id' => $this->chatId,
+            'file_id' => $goal['file_id'],
+            'caption' => $goal['caption'],
+        ]);
+
+        if ($response && $response['ok']) {
+            $messageId = $response['result']['message_id'];
+            $deleteAt  = date('Y-m-d H:i:s', time() + (20));
+            $this->db->logScheduledDelete($goal['id'], $this->chatId, $messageId, $deleteAt);
+
+            $this->sendRequest("sendMessage", ["chat_id" => $this->chatId, "text" => "✅ درحال ارسال ..."]);
+        }
+    }
+
+    private function promptUserToJoin(array $channels, string $token): void
+    {
+        $text     = "❗️ برای مشاهده این محتوا، ابتدا باید در کانال‌های زیر عضو شوید. پس از عضویت، روی دکمه «عضو شدم» کلیک کنید.";
+        $keyboard = [];
+
+        foreach ($channels as $channel) {
+            $channelUsername = ltrim($channel, '@');
+            $keyboard[]      = [['text' => "👈 عضویت در کانال {$channelUsername}", 'url' => "https://t.me/{$channelUsername}"]];
+        }
+
+        $keyboard[] = [['text' => '✅ عضو شدم', 'callback_data' => "check_join_{$token}"]];
+
+        $this->sendRequest("sendMessage", [
+            'chat_id'      => $this->chatId,
+            'text'         => $text,
+            'reply_markup' => json_encode(['inline_keyboard' => $keyboard]),
+        ]);
+    }
     private function updateChannelSelectionMenu(int $chatId, int $messageId, int $goalId, array $selectedChannels): void
     {
         $allChannels    = $this->db->getAllChannels();

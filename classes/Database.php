@@ -101,6 +101,25 @@ class Database
         }
     }
 
+    public function getGoalByToken(string $token)
+    {
+        $stmt = $this->pdo->prepare("SELECT * FROM goals WHERE token = ? LIMIT 1");
+        $stmt->execute([$token]);
+        return $stmt->fetch();
+    }
+
+    public function logScheduledDelete(int $goalId, int $chatId, int $messageId, string $deleteAt): bool
+    {
+        $sql = "INSERT INTO goal_deletions (goal_id, chat_id, message_id, delete_at) VALUES (?, ?, ?, ?)";
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            return $stmt->execute([$goalId, $chatId, $messageId, $deleteAt]);
+        } catch (PDOException $e) {
+            error_log("❌ Failed to log scheduled delete: " . $e->getMessage());
+            return false;
+        }
+    }
+
     public function generateUniqueToken(int $length = 5): string
     {
         $characters       = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
