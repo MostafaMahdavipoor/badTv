@@ -478,5 +478,6 @@ class BotHandler
             'curl_error'   => $curlError,
         ];
         $logMessage = json_encode($logData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        error_log('logMessage:' . print_r($logMessage ,true));
     }
 }
