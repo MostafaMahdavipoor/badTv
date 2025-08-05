@@ -277,7 +277,9 @@ class BotHandler
                         $this->fileHandler->saveUser($chatId,  $stateData);
 
                         $this->updateChannelSelectionMenu($chatId, $messageId, $goalId, $selectedChannels);
-                    }
+                    }else{
+    error_log("Could not parse callback_data: " . print_r($stateData, true));
+}
                 } else {
                     error_log("Could not parse callback_data: " . $callbackData);
                 }
