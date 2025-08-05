@@ -262,9 +262,9 @@ class BotHandler
                     $goalId      = (int) $matches[1]; // بخش عددی به عنوان goalId
                     $channelName = $matches[2];       // بقیه رشته به عنوان channelName
 
-                    $stateData = $this->fileHandler->getUser($chatId)['state'] ?? null;
+                    $stateData = $this->fileHandler->getUser($chatId) ?? null;
 
-                    if ($stateData && $stateData['name'] === 'selecting_channels' && $stateData['goal_id'] == $goalId) {
+                    if ($stateData && $stateData['state'] === 'selecting_channels' && $stateData['goal_id'] == $goalId) {
                         $selectedChannels = $stateData['selected_channels'];
 
                         if (($key = array_search($channelName, $selectedChannels)) !== false) {
@@ -274,7 +274,7 @@ class BotHandler
                         }
 
                         $stateData['selected_channels'] = array_values($selectedChannels);
-                        $this->fileHandler->saveUser($chatId, ['state' => $stateData]);
+                        $this->fileHandler->saveUser($chatId,  $stateData);
 
                         $this->updateChannelSelectionMenu($chatId, $messageId, $goalId, $selectedChannels);
                     }
@@ -414,7 +414,7 @@ class BotHandler
             'goal_id'           => $goalId,
             'selected_channels' => [],
         ];
-        $this->fileHandler->saveUser($chatId, ['state' => $stateData]);
+        $this->fileHandler->saveUser($chatId,  $stateData);
         $allChannels = $this->db->getAllChannels();
         $text        = "لطفاً کانال‌های مورد نظر برای ارسال را انتخاب کنید:";
 
