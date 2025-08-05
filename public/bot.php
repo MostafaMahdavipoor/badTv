@@ -1,6 +1,6 @@
 <?php
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__ . '/../vendor/autoload.php';
 
 use Config\AppConfig;
 use Bot\BotHandler;
@@ -20,9 +20,9 @@ if (session_status() === PHP_SESSION_NONE) {
 if (isset($update['inline_query'])) {
     $inlineQuery = $update['inline_query'];
     $query = $inlineQuery['query'];
+    $bot = new BotHandler($chatId, $text, $messageId, $message);
 
-    $inlineQueryHandler = new InlineQueryHandler();
-    $inlineQueryHandler->handleInlineQuery($inlineQuery);
+    $bot->handleInlineQuery($inlineQuery);
 } elseif (isset($update['message'])) {
     $message = $update['message'];
     $chatId = $message['chat']['id'];
