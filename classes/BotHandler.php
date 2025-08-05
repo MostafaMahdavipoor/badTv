@@ -204,6 +204,19 @@ class BotHandler
                 }
                 break;
 
+            case (str_starts_with($callbackData, 'show_admin_info_')):
+                $adminIdToShow = substr($callbackData, strlen('show_admin_info_'));
+                $adminInfo     = $this->db->getUserInfo((int) $adminIdToShow); 
+
+                if ($adminInfo && ! empty($adminInfo['username'])) {
+                    $infoText = "برای تماس با این ادمین، از یوزرنیم زیر استفاده کنید:\n@" . $adminInfo['username'];
+                } else {
+                    $infoText = "این کاربر یوزرنیم عمومی ندارد و امکان تماس مستقیم وجود ندارد.";
+                }
+
+                $this->answerCallbackQuery($callbackQueryId, $infoText, true);
+                break;
+
         }
 
     }
@@ -307,7 +320,7 @@ class BotHandler
             $adminName   = $admin['first_name'] ?? ('@' . $admin['username']) ?? $admin['chat_id'];
 
             $inlineKeyboard[] = [
-                ['text' => "👤 " . $adminName, 'url' => 'tg://user?id=' . $adminChatId],
+                ['text' => "👤 " . $adminName, 'callback_data' => 'show_admin_info_' . $adminChatId],
                 ['text' => '❌ حذف', 'callback_data' => 'remove_admin_' . $adminChatId],
             ];
         }
@@ -478,6 +491,6 @@ class BotHandler
             'curl_error'   => $curlError,
         ];
         $logMessage = json_encode($logData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-        error_log('logMessage:' . print_r($logMessage ,true));
+        error_log('logMessage:' . print_r($logMessage, true));
     }
 }
