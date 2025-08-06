@@ -258,8 +258,8 @@ class BotHandler
             case (str_starts_with($callbackData, 'toggle_channel_')):
 
                 if (preg_match('/^toggle_channel_(\d+)_(.+)$/', $callbackData, $matches)) {
-                    $goalId      = (int) $matches[1]; // بخش عددی به عنوان goalId
-                    $channelName = $matches[2];       // بقیه رشته به عنوان channelName
+                    $goalId      = (int) $matches[1];
+                    $channelName = $matches[2];
 
                     $stateData = $this->fileHandler->getUser($chatId) ?? null;
 
