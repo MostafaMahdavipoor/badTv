@@ -2,8 +2,7 @@
 
 date_default_timezone_set('Asia/Tehran');
 
-require_once __DIR__ . '/Config/AppConfig.php';
-require_once __DIR__ . '/Bot/Database.php';
+require __DIR__ . '/../vendor/autoload.php';
 
 use Config\AppConfig;
 use Bot\Database;

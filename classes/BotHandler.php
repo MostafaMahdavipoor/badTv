@@ -336,6 +336,9 @@ class BotHandler
                 $this->showGoalsList(1, $messageId);
                 break;
 
+            case 'bot_stats':
+                $this->showBotStats($messageId);
+                break;
             case (str_starts_with($callbackData, 'list_goals_page_')):
                 $page = (int) substr($callbackData, strlen('list_goals_page_'));
                 $this->showGoalsList($page, $messageId);
@@ -810,18 +813,17 @@ class BotHandler
         $panelText .= "ادمین عزیز، خوش آمدید. لطفاً یک گزینه را انتخاب کنید:";
 
         $inlineKeyboard = [
-
             [
                 ['text' => '⚽ آپلود گل', 'callback_data' => 'admin_upload_goal'],
+                ['text' => '📋 لیست گل‌ها', 'callback_data' => 'admin_list_goal'],
             ],
             [
-                ['text' => '📋 لیست گل‌ها', 'callback_data' => 'admin_list_goal'],
+                ['text' => '📊 آمار ربات', 'callback_data' => 'bot_stats'],
             ],
             [
                 ['text' => '⚙️ تنظیمات', 'callback_data' => 'admin_settings'],
             ],
         ];
-
         $data = [
             'chat_id'      => $this->chatId,
             'message_id'   => $this->messageId,
@@ -985,5 +987,55 @@ class BotHandler
         ];
 
         $this->sendRequest($method, $params);
+    }
+    private function showBotStats(int $messageId): void
+    {
+        // دریافت آمار از دیتابیس
+        $userStats   = $this->db->getUserStats();
+        $goalStats   = $this->db->getGoalsStats();
+        $allAdmins   = $this->db->getAdmins();
+        $allChannels = $this->db->getAllChannels();
+
+        // ساخت متن پیام
+        $text = "🤖 آمار ربات شما:\n\n";
+
+        $text .= "👥 وضعیت کاربران:\n";
+        $text .= "▫️ کل کاربران: " . number_format($userStats['total_users']) . "\n";
+        // $text .= "🚫 بلاک کرده: " . number_format($userStats['blocked_users']) . "\n\n";
+
+        $text .= "📈 کاربران جدید:\n";
+        $text .= "▫️ امروز: " . $this->db->getNewUsersCount('today') . "\n";
+        $text .= "▫️ دیروز: " . $this->db->getNewUsersCount('yesterday') . "\n";
+        $text .= "▫️ هفته اخیر: " . $this->db->getNewUsersCount('week') . "\n";
+        $text .= "▫️ ماه اخیر: " . $this->db->getNewUsersCount('month') . "\n\n";
+
+        $text .= "  فعالیت کاربران:\n";
+        $text .= "▫️ آنلاین: " . $this->db->getActiveUsersCount('online') . "\n";
+        $text .= "▫️ ساعت اخیر: " . $this->db->getActiveUsersCount('hour') . "\n";
+        $text .= "▫️ هفته اخیر: " . $this->db->getActiveUsersCount('week') . "\n";
+        $text .= "▫️ ماه اخیر: " . $this->db->getActiveUsersCount('month') . "\n\n";
+
+        $text .= "🗂 آمار محتوا (گل‌ها):\n";
+        $text .= "▫️ کل فایل‌ها: " . number_format($goalStats['total']) . "\n";
+        $text .= "📹 ویدیو: " . number_format($goalStats['video'] ?? 0) . "\n";
+        $text .= "🏞 عکس: " . number_format($goalStats['photo'] ?? 0) . "\n";
+        $text .= "🎞 گیف: " . number_format($goalStats['animation'] ?? 0) . "\n";
+        $text .= "📄 داکیومنت: " . number_format($goalStats['document'] ?? 0) . "\n\n";
+
+        $text .= "🛡 مدیریت:\n";
+        $text .= "▫️ تعداد ادمین‌ها: " . count($allAdmins) . "\n";
+        $text .= "▫️ کانال‌های جوین اجباری: " . count($allChannels) . "\n\n";
+
+        $keyboard = [
+            [['text' => '⬅️ بازگشت به پنل', 'callback_data' => 'admin_panel']],
+        ];
+
+        $this->sendRequest('editMessageText', [
+            'chat_id'      => $this->chatId,
+            'message_id'   => $messageId,
+            'text'         => $text,
+            'parse_mode'   => 'Markdown',
+            'reply_markup' => json_encode(['inline_keyboard' => $keyboard]),
+        ]);
     }
 }

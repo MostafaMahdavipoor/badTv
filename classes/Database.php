@@ -415,4 +415,71 @@ class Database
             return false;
         }
     }
+    public function getUserStats(): array
+    {
+        $stats = [];
+        // تعداد کل کاربران و کاربران بلاک کرده
+        $stmt_total = $this->pdo->query("SELECT COUNT(id) FROM users");
+        $stats['total_users'] = (int) $stmt_total->fetchColumn();
+        $stmt_blocked = $this->pdo->query("SELECT COUNT(id) FROM users WHERE status = 'blocked'");
+        $stats['blocked_users'] = (int) $stmt_blocked->fetchColumn();
+        return $stats;
+    }
+
+    public function getNewUsersCount(string $period): int
+    {
+        $query = "";
+        switch ($period) {
+            case 'today':
+                $query = "SELECT COUNT(id) FROM users WHERE DATE(created_at) = CURDATE()";
+                break;
+            case 'yesterday':
+                $query = "SELECT COUNT(id) FROM users WHERE DATE(created_at) = CURDATE() - INTERVAL 1 DAY";
+                break;
+            case 'week':
+                $query = "SELECT COUNT(id) FROM users WHERE created_at >= CURDATE() - INTERVAL 7 DAY";
+                break;
+            case 'month':
+                $query = "SELECT COUNT(id) FROM users WHERE created_at >= CURDATE() - INTERVAL 1 MONTH";
+                break;
+        }
+        $stmt = $this->pdo->query($query);
+        return (int) $stmt->fetchColumn();
+    }
+
+    public function getActiveUsersCount(string $period): int
+    {
+        $query = "";
+        switch ($period) {
+            case 'online': // آنلاین به معنی فعال در 5 دقیقه اخیر
+                $query = "SELECT COUNT(id) FROM users WHERE last_activity >= NOW() - INTERVAL 5 MINUTE";
+                break;
+            case 'hour':
+                $query = "SELECT COUNT(id) FROM users WHERE last_activity >= NOW() - INTERVAL 1 HOUR";
+                break;
+            case 'yesterday': // فعال در روز گذشته
+                $query = "SELECT COUNT(id) FROM users WHERE last_activity >= NOW() - INTERVAL 1 DAY";
+                break;
+            case 'week':
+                $query = "SELECT COUNT(id) FROM users WHERE last_activity >= NOW() - INTERVAL 7 DAY";
+                break;
+            case 'month':
+                $query = "SELECT COUNT(id) FROM users WHERE last_activity >= NOW() - INTERVAL 1 MONTH";
+                break;
+        }
+        $stmt = $this->pdo->query($query);
+        return (int) $stmt->fetchColumn();
+    }
+
+    public function getGoalsStats(): array
+    {
+        $stats = ['total' => 0];
+        $stmt = $this->pdo->query("SELECT type, COUNT(id) as count FROM goals GROUP BY type");
+        $results = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+        foreach ($results as $type => $count) {
+            $stats[$type] = $count;
+            $stats['total'] += $count;
+        }
+        return $stats;
+    }
 }
