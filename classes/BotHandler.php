@@ -1011,11 +1011,11 @@ class BotHandler
     // بخش کاربران
     $text .= "👤 <b>کاربران</b>\n";
     $text .= "<code>..............................</code>\u{200F}\n";
-    $text .= "<code>▫️ کل اعضا: {$totalUsers}</code>\n";
-    $text .= "<code>▫️ بلاک کرده: {$blockedUsers}</code>\n";
+    $text .= "▫️ کل اعضا: {$totalUsers}\n";
+    $text .= "▫️ بلاک کرده: {$blockedUsers}\n";
     $text .= "<code>..............................</code>\u{200F}\n";
-    $text .= "<code>▫️ عضو امروز: {$joinedToday}  | عضو دیروز: {$joinedYesterday}</code>\n";
-    $text .= "<code>▫️ فعال در هفته: {$activeWeek} | فعال در ماه: {$activeMonth}</code>\n\n";
+    $text .= "▫️ عضو امروز: {$joinedToday}  | عضو دیروز: {$joinedYesterday}\n";
+    $text .= "▫️ فعال در هفته: {$activeWeek} | فعال در ماه: {$activeMonth}\n\n";
     
     // بخش محتوا
     $totalFiles = number_format($goalStats['total']);
@@ -1026,10 +1026,10 @@ class BotHandler
 
     $text .= "🗂 <b>محتوا</b>\n";
     $text .= "<code>..............................</code>\u{200F}\n";
-    $text .= "<code>▫️ کل فایل‌ها: {$totalFiles}</code>\n";
+    $text .= "▫️ کل فایل‌ها: {$totalFiles}\n";
     $text .= "<code>..............................</code>\u{200F}\n";
-    $text .= "<code>📹 ویدیو: {$videos} | 🏞 عکس: {$photos}</code>\n";
-    $text .= "<code>🎞 گیف: {$animations}   | 📄 فایل: {$documents}</code>\n\n";
+    $text .= "📹 ویدیو: {$videos} | 🏞 عکس: {$photos}\n";
+    $text .= "🎞 گیف: {$animations}   | 📄 فایل: {$documents}\n\n";
 
     // بخش مدیریت
     $adminCount   = count($allAdmins);
@@ -1037,14 +1037,11 @@ class BotHandler
 
     $text .= "🛡 <b>مدیریت</b>\n";
     $text .= "<code>..............................</code>\u{200F}\n";
-    $text .= "<code>▫️ ادمین‌ها: {$adminCount} | ▫️ کانال‌ها: {$channelCount}</code>\n\n";
+    $text .= "▫️ ادمین‌ها: {$adminCount} | ▫️ کانال‌ها: {$channelCount}\n\n";
 
-    // بخش فوتر
-    $text .= "🔄 _آخرین بروزرسانی در: " . date('Y/m/d H:i:s') . "_";
-
+   
     // --- کیبورد ---
     $keyboard = [
-        [['text' => '🔄 بروزرسانی', 'callback_data' => 'bot_stats']],
         [['text' => '⬅️ بازگشت به پنل', 'callback_data' => 'admin_panel']]
     ];
 
