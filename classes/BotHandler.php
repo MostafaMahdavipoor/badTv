@@ -464,7 +464,10 @@ class BotHandler
 
     private function sendGoalToUser(array $goal): void
     {
-        $this->sendRequest("sendMessage", ["chat_id" => $this->chatId, "text" => "✅ درحال ارسال ..."]);
+        $this->sendRequest("sendMessage", [
+            "chat_id" => $this->chatId,
+            "text"    => "✅ پیام برای شما ارسال شد و تا ۲۰ ثانیه دیگر به صورت خودکار حذف خواهد شد.",
+        ]);
         $method  = '';
         $chatId  = $this->chatId;
         $fileId  = $goal['file_id'];
@@ -961,7 +964,7 @@ class BotHandler
             $this->answerCallbackQuery($this->callbackQueryId, "❌ گل مورد نظر یافت نشد!", true);
             return;
         }
-        
+
         $this->answerCallbackQuery($this->callbackQueryId);
 
         $method = 'send' . ucfirst($goal['type']);

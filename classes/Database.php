@@ -383,6 +383,28 @@ class Database
         }
     }
 
+    public function getDueDeletions(): array
+    {
+        try {
+            $stmt = $this->pdo->prepare("SELECT id, chat_id, message_id FROM goal_deletions WHERE delete_at <= NOW()");
+            $stmt->execute();
+            return $stmt->fetchAll();
+        } catch (PDOException $e) {
+            error_log("❌ Failed to get due deletions: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function removeDeletionLog(int $logId): bool
+    {
+        try {
+            $stmt = $this->pdo->prepare("DELETE FROM goal_deletions WHERE id = ?");
+            return $stmt->execute([$logId]);
+        } catch (PDOException $e) {
+            error_log("❌ Failed to remove deletion log: " . $e->getMessage());
+            return false;
+        }
+    }
     public function deleteGoalById(int $goalId): bool
     {
         try {
