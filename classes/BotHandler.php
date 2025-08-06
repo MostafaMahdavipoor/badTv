@@ -102,10 +102,7 @@ class BotHandler
                     'reply_markup' => json_encode(['inline_keyboard' => $cancelKeyboard]),
                 ]);
                 break;
-            case 'admin_list_goal':
-
-                break;
-
+                
             case 'admin_settings':
                 $settingsText = "⚙️ <b>بخش تنظیمات</b>\n\n";
                 $settingsText .= "لطفاً یکی از گزینه‌های زیر را انتخاب کنید:";
@@ -335,7 +332,7 @@ class BotHandler
                 $this->handleGoalStart($token);
                 break;
 
-                 case 'admin_list_goal':
+            case 'admin_list_goal':
                 $this->showGoalsList(1, $messageId);
                 break;
 
