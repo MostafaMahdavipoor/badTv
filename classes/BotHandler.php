@@ -437,11 +437,38 @@ class BotHandler
 
     private function sendGoalToUser(array $goal): void
     {
-        $response = $this->sendRequest($goal['type'] === 'video' ? 'sendVideo' : 'sendAnimation', [
-            'chat_id' => $this->chatId,
-            'file_id' => $goal['file_id'],
-            'caption' => $goal['caption'],
-        ]);
+        $method  = '';
+        $chatId  = $this->chatId;
+        $fileId  = $goal['file_id'];
+        $caption = $goal['caption'];
+
+        switch ($goal['type']) {
+            case 'video':
+                $method = 'sendVideo';
+                break;
+            case 'animation':
+                $method = 'sendAnimation';
+                break;
+            case 'photo':
+                $method = 'sendPhoto';
+                break;
+            case 'document':
+                $method = 'sendDocument';
+                break;
+            default:
+                error_log("Invalid goal type for sending: " . $goal['type']);
+                return;
+        }
+
+        $params = [
+            'chat_id' => $chatId,
+            'caption' => $caption,
+        ];
+
+        $fileParamName          = $goal['type'];
+        $params[$fileParamName] = $fileId;
+
+        $response = $this->sendRequest($method, $params);
 
         if ($response && $response['ok']) {
             $messageId = $response['result']['message_id'];
@@ -543,7 +570,7 @@ class BotHandler
             $photoArray = $message['photo'];
             $fileId     = end($photoArray)['file_id'];
             $fileType   = 'photo';
-        } elseif (isset($message['document'])) { 
+        } elseif (isset($message['document'])) {
             $fileId   = $message['document']['file_id'];
             $fileType = 'document';
         }
@@ -597,7 +624,7 @@ class BotHandler
 
     private function processAdminAddition(array $message): void
     {
-        
+
         $chatId           = $message['chat']['id'];
         $newAdminId       = null;
         $newAdminUsername = null;
