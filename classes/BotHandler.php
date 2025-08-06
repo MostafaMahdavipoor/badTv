@@ -102,7 +102,7 @@ class BotHandler
                     'reply_markup' => json_encode(['inline_keyboard' => $cancelKeyboard]),
                 ]);
                 break;
-                
+
             case 'admin_settings':
                 $settingsText = "⚙️ <b>بخش تنظیمات</b>\n\n";
                 $settingsText .= "لطفاً یکی از گزینه‌های زیر را انتخاب کنید:";
@@ -346,8 +346,11 @@ class BotHandler
                 $this->showGoalDetails($goalId, $messageId);
                 break;
 
+            case 'delete_message':
+                $this->deleteMessageWithDelay();
+                break;
             case (str_starts_with($callbackData, 'delete_goal_')):
-                $goalId = (int) substr($callbackData, strlen('delete_goal_'));
+                $goalId  = (int) substr($callbackData, strlen('delete_goal_'));
                 $deleted = $this->db->deleteGoalById($goalId);
                 if ($deleted) {
                     $this->answerCallbackQuery($this->callbackQueryId, "✅ گل با موفقیت حذف شد.", false);
@@ -959,10 +962,6 @@ class BotHandler
             return;
         }
 
-        // ابتدا پیام قبلی (لیست) را حذف می‌کنیم
-        $this->sendRequest('deleteMessage', ['chat_id' => $this->chatId, 'message_id' => $messageId]);
-
-        // آماده‌سازی پارامترها برای ارسال رسانه
         $method = 'send' . ucfirst($goal['type']);
         $params = [
             'chat_id'      => $this->chatId,
@@ -974,7 +973,7 @@ class BotHandler
                         ['text' => '❌ حذف گل', 'callback_data' => 'delete_goal_' . $goalId],
                     ],
                     [
-                        ['text' => '⬅️ بازگشت به لیست', 'callback_data' => 'admin_list_goal'],
+                        ['text' => '⬅️ بازگشت به لیست', 'callback_data' => 'delete_message'],
                     ],
                 ],
             ]),
