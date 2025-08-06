@@ -834,10 +834,10 @@ class BotHandler
 
         if ($messageId === null) {
             $method = 'sendMessage';
-           
+
         } else {
             $method             = 'editMessageText';
-            $data['message_id'] = $messageId; 
+            $data['message_id'] = $messageId;
         }
         $this->sendRequest($method, $data);
     }
@@ -989,69 +989,75 @@ class BotHandler
 
         $this->sendRequest($method, $params);
     }
-   private function showBotStats(int $messageId): void
-{
-    // دریافت آمار از دیتابیس
-    $userStats       = $this->db->getUserStats();
-    $goalStats       = $this->db->getGoalsStats();
-    $allAdmins       = $this->db->getAdmins();
-    $allChannels     = $this->db->getAllChannels();
+    private function showBotStats(int $messageId): void
+    {
+        // دریافت آمار از دیتابیس
+        $userStats   = $this->db->getUserStats();
+        $goalStats   = $this->db->getGoalsStats();
+        $allAdmins   = $this->db->getAdmins();
+        $allChannels = $this->db->getAllChannels();
 
-    // مقادیر را برای خوانایی بهتر در متغیرها می‌ریزیم
-    $totalUsers      = number_format($userStats['total_users']);
-    $blockedUsers    = number_format($userStats['blocked_users']);
-    $joinedToday     = number_format($this->db->getNewUsersCount('today'));
-    $joinedYesterday = number_format($this->db->getNewUsersCount('yesterday'));
-    $activeWeek      = number_format($this->db->getActiveUsersCount('week'));
-    $activeMonth     = number_format($this->db->getActiveUsersCount('month'));
+        // مقادیر را برای خوانایی بهتر در متغیرها می‌ریزیم
+        $totalUsers      = number_format($userStats['total_users']);
+        $blockedUsers    = number_format($userStats['blocked_users']);
+        $joinedToday     = number_format($this->db->getNewUsersCount('today'));
+        $joinedYesterday = number_format($this->db->getNewUsersCount('yesterday'));
+        $activeWeek      = number_format($this->db->getNewUsersCount('week'));
+        $activeMonth     = number_format($this->db->getNewUsersCount('month'));
+        $online          = number_format($this->db->getActiveUsersCount('online'));
 
-    // --- شروع ساخت متن پیام ---
-    $text = "📊 <b>آمار کلی ربات شما</b> 📊\n\n";
+        // --- شروع ساخت متن پیام ---
+        $text = "📊 <b>آمار کلی ربات شما</b> 📊\n\n";
 
-    // بخش کاربران
-    $text .= "👤 <b>کاربران</b>\n";
-    $text .= "<code>..............................</code>\u{200F}\n";
-    $text .= "▫️ کل اعضا: {$totalUsers}\n";
-    $text .= "▫️ بلاک کرده: {$blockedUsers}\n";
-    $text .= "<code>..............................</code>\u{200F}\n";
-    $text .= "▫️ عضو امروز: {$joinedToday}  | عضو دیروز: {$joinedYesterday}\n";
-    $text .= "▫️ فعال در هفته: {$activeWeek} | فعال در ماه: {$activeMonth}\n\n";
-    
-    // بخش محتوا
-    $totalFiles = number_format($goalStats['total']);
-    $videos     = number_format($goalStats['video'] ?? 0);
-    $photos     = number_format($goalStats['photo'] ?? 0);
-    $animations = number_format($goalStats['animation'] ?? 0);
-    $documents  = number_format($goalStats['document'] ?? 0);
+        // بخش کاربران
+        $text .= "👤 <b>کاربران</b>\n";
+        $text .= "<code>----------------------------</code>\u{200F}\n";
+        $text .= "▫️ <b>کل اعضا:</b> {$totalUsers}\n";
+        $text .= "▫️ <b>بلاک شده‌ها:</b> {$blockedUsers}\n";
+        $text .= "▫️ <b> انلاین:</b> {$online}\n";
+        $text .= "<code>----------------------------</code>\u{200F}\n";
+        $text .= "▫️ <b>امروز:</b> {$joinedToday}\n";
+        $text .= "▫️ <b>دیروز:</b> {$joinedYesterday}\n";
+        $text .= "▫️ <b>هفته:</b> {$activeWeek} \n";
+        $text .= "▫️ <b>ماه:</b> {$activeMonth}\n\n";
 
-    $text .= "🗂 <b>محتوا</b>\n";
-    $text .= "<code>..............................</code>\u{200F}\n";
-    $text .= "▫️ کل فایل‌ها: {$totalFiles}\n";
-    $text .= "<code>..............................</code>\u{200F}\n";
-    $text .= "📹 ویدیو: {$videos} | 🏞 عکس: {$photos}\n";
-    $text .= "🎞 گیف: {$animations}   | 📄 فایل: {$documents}\n\n";
+        // بخش محتوا
+        $totalFiles = number_format($goalStats['total']);
+        $videos     = number_format($goalStats['video'] ?? 0);
+        $photos     = number_format($goalStats['photo'] ?? 0);
+        $animations = number_format($goalStats['animation'] ?? 0);
+        $documents  = number_format($goalStats['document'] ?? 0);
 
-    // بخش مدیریت
-    $adminCount   = count($allAdmins);
-    $channelCount = count($allChannels);
+        $text .= "🗂 <b>محتوا</b>\n";
+        $text .= "<code>----------------------------</code>\u{200F}\n";
+        $text .= "▫️ <b>کل فایل‌ها:</b> {$totalFiles}\n";
+        $text .= "<code>----------------------------</code>\u{200F}\n";
+        $text .= "📹 <b>ویدیو:</b> {$videos} \n";
+        $text .= "🏞 <b>عکس:</b> {$photos}\n";
+        $text .= "🎞 <b>گیف:</b> {$animations}\n";
+        $text .= "📄 <b>فایل‌ها:</b> {$documents}\n\n";
 
-    $text .= "🛡 <b>مدیریت</b>\n";
-    $text .= "<code>..............................</code>\u{200F}\n";
-    $text .= "▫️ ادمین‌ها: {$adminCount} | ▫️ کانال‌ها: {$channelCount}\n\n";
+        // بخش مدیریت
+        $adminCount   = count($allAdmins);
+        $channelCount = count($allChannels);
 
-   
-    // --- کیبورد ---
-    $keyboard = [
-        [['text' => '⬅️ بازگشت به پنل', 'callback_data' => 'admin_panel']]
-    ];
+        $text .= "🛡 <b>مدیریت</b>\n";
+        $text .= "<code>----------------------------</code>\u{200F}\n";
+        $text .= "▫️ <b>ادمین‌ها:</b> {$adminCount} | ▫️ <b>کانال‌ها:</b> {$channelCount}\n\n";
 
-    // --- ارسال درخواست ---
-    $this->sendRequest('editMessageText', [
-        'chat_id'      => $this->chatId,
-        'message_id'   => $messageId,
-        'text'         => $text,
-        'parse_mode'   => 'HTML', // حتما باید HTML باشد
-        'reply_markup' => json_encode(['inline_keyboard' => $keyboard])
-    ]);
-}
+        // --- کیبورد ---
+        $keyboard = [
+            [['text' => '⬅️ بازگشت به پنل', 'callback_data' => 'admin_panel']],
+        ];
+
+        // --- ارسال درخواست ---
+        $this->sendRequest('editMessageText', [
+            'chat_id'      => $this->chatId,
+            'message_id'   => $messageId,
+            'text'         => $text,
+            'parse_mode'   => 'HTML', // حتما باید HTML باشد
+            'reply_markup' => json_encode(['inline_keyboard' => $keyboard]),
+        ]);
+    }
+
 }
