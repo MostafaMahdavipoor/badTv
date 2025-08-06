@@ -538,9 +538,15 @@ class BotHandler
             $fileType = 'video';
         } elseif (isset($message['animation'])) {
             $fileId   = $message['animation']['file_id'];
-            $fileType = 'gif';
+            $fileType = 'animation';
+        } elseif (isset($message['photo'])) {
+            $photoArray = $message['photo'];
+            $fileId     = end($photoArray)['file_id'];
+            $fileType   = 'photo';
+        } elseif (isset($message['document'])) { 
+            $fileId   = $message['document']['file_id'];
+            $fileType = 'document';
         }
-
         if ($fileId === null) {
             $this->sendRequest('sendMessage', ['chat_id' => $chatId, 'text' => '❌ لطفاً فقط ویدیو یا گیف ارسال کنید.']);
             return;
@@ -591,17 +597,7 @@ class BotHandler
 
     private function processAdminAddition(array $message): void
     {
-        // if (isset($message['forward_origin'])) {
-        //     $chatId       = $message['chat']['id'];
-        //     $errorMessage = "❌ امکان پردازش فایل‌های فوروارد شده وجود ندارد.\n\n" .
-        //         "لطفاً فایل ویدیو یا گیف را مستقیماً برای ربات آپلود کنید (ارسال از گالری).";
-
-        //     $this->sendRequest('sendMessage', [
-        //         'chat_id' => $chatId,
-        //         'text'    => $errorMessage,
-        //     ]);
-        //     return;
-        // }
+        
         $chatId           = $message['chat']['id'];
         $newAdminId       = null;
         $newAdminUsername = null;
