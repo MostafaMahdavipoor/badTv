@@ -891,6 +891,7 @@ class BotHandler
         $goals      = $this->db->getGoalsPaginated($page, $perPage);
         $totalGoals = $this->db->getGoalsCount();
         $totalPages = ceil($totalGoals / $perPage);
+        $this->answerCallbackQuery($this->callbackQueryId);
 
         $text = "📋 *لیست گل‌ها (صفحه {$page} از {$totalPages})*\n\n";
         $text .= "برای مشاهده جزئیات و حذف، روی هر گل کلیک کنید:";
