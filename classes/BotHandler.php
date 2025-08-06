@@ -824,19 +824,20 @@ class BotHandler
                 ['text' => '⚙️ تنظیمات', 'callback_data' => 'admin_settings'],
             ],
         ];
+        // ابتدا پارامترهای مشترک را تعریف می‌کنیم
         $data = [
             'chat_id'      => $this->chatId,
-            'message_id'   => $this->messageId,
             'text'         => $panelText,
             'parse_mode'   => 'HTML',
-            'reply_markup' => json_encode([
-                'inline_keyboard' => $inlineKeyboard,
-            ]),
+            'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
         ];
-        if ($messageId == null) {
+
+        if ($messageId === null) {
             $method = 'sendMessage';
+           
         } else {
-            $method = 'editMessageText';
+            $method             = 'editMessageText';
+            $data['message_id'] = $messageId; 
         }
         $this->sendRequest($method, $data);
     }
