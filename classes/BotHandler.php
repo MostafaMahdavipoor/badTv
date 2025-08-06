@@ -15,6 +15,7 @@ class BotHandler
     public $db;
     private $fileHandler;
     private $zarinpalPaymentHandler;
+    private $callbackQueryId;
     private $botToken;
     private $botLink;
 
@@ -70,19 +71,19 @@ class BotHandler
     }
     public function handleCallbackQuery($callbackQuery): void
     {
-        $callbackData    = $callbackQuery["data"] ?? null;
-        $chatId          = $callbackQuery["message"]["chat"]["id"] ?? null;
-        $callbackQueryId = $callbackQuery["id"] ?? null;
-        $messageId       = $callbackQuery["message"]["message_id"] ?? null;
-        $currentKeyboard = $callbackQuery["message"]["reply_markup"]["inline_keyboard"] ?? [];
-        $userLanguage    = $this->db->getUserLanguage($this->chatId);
-        $user            = $this->message['from'] ?? $this->callbackQuery['from'] ?? null;
+        $callbackData          = $callbackQuery["data"] ?? null;
+        $chatId                = $callbackQuery["message"]["chat"]["id"] ?? null;
+        $this->callbackQueryId = $callbackQuery["id"] ?? null;
+        $messageId             = $callbackQuery["message"]["message_id"] ?? null;
+        $currentKeyboard       = $callbackQuery["message"]["reply_markup"]["inline_keyboard"] ?? [];
+        $userLanguage          = $this->db->getUserLanguage($this->chatId);
+        $user                  = $this->message['from'] ?? $this->callbackQuery['from'] ?? null;
         if ($user !== null) {
             $this->db->saveUser($user);
         } else {
             error_log("❌ Cannot save user: 'from' is missing in both message and callbackQuery.");
         }
-        if (! $callbackData || ! $chatId || ! $callbackQueryId || ! $messageId) {
+        if (! $callbackData || ! $chatId || ! $this->callbackQueryId || ! $messageId) {
             error_log("Callback query missing required data.");
             return;
         }
@@ -167,10 +168,10 @@ class BotHandler
                 $channelUsernameToDelete = urldecode(substr($callbackData, strlen('delete_channel_')));
                 $deleted                 = $this->db->deleteChannelByUsername($channelUsernameToDelete);
                 if ($deleted) {
-                    $this->answerCallbackQuery($callbackQueryId, "کانال با موفقیت حذف شد.", true);
+                    $this->answerCallbackQuery($this->callbackQueryId, "کانال با موفقیت حذف شد.", true);
                     $this->showChannelsMenu($chatId, $messageId);
                 } else {
-                    $this->answerCallbackQuery($callbackQueryId, "خطا در حذف کانال.", true);
+                    $this->answerCallbackQuery($this->callbackQueryId, "خطا در حذف کانال.", true);
                 }
                 break;
 
@@ -207,10 +208,10 @@ class BotHandler
                 $removed = $this->db->removeAdmin((int) $adminIdToRemove);
 
                 if ($removed) {
-                    $this->answerCallbackQuery($callbackQueryId, "ادمین با موفقیت حذف شد.", true);
+                    $this->answerCallbackQuery($this->callbackQueryId, "ادمین با موفقیت حذف شد.", true);
                     $this->showAdminsMenu($chatId, $messageId);
                 } else {
-                    $this->answerCallbackQuery($callbackQueryId, "خطا در حذف ادمین.", true);
+                    $this->answerCallbackQuery($this->callbackQueryId, "خطا در حذف ادمین.", true);
                 }
                 break;
 
@@ -224,7 +225,7 @@ class BotHandler
                     $infoText = "این کاربر یوزرنیم عمومی ندارد و امکان تماس مستقیم وجود ندارد.";
                 }
 
-                $this->answerCallbackQuery($callbackQueryId, $infoText, true);
+                $this->answerCallbackQuery($this->callbackQueryId, $infoText, true);
                 break;
 
             case 'confirm_caption':
@@ -292,7 +293,7 @@ class BotHandler
                     $selectedChannels = $stateData['selected_channels'];
 
                     if (empty($selectedChannels)) {
-                        $this->answerCallbackQuery($callbackQueryId, "هیچ کانالی انتخاب نشده است!", true);
+                        $this->answerCallbackQuery($this->callbackQueryId, "هیچ کانالی انتخاب نشده است!", true);
                         break;
                     }
 
@@ -329,9 +330,35 @@ class BotHandler
 
             case (str_starts_with($callbackData, 'check_join_')):
 
-                $this->answerCallbackQuery($callbackQueryId);
+                $this->answerCallbackQuery($this->callbackQueryId);
                 $token = substr($callbackData, strlen('check_join_'));
                 $this->handleGoalStart($token);
+                break;
+
+                 case 'admin_list_goal':
+                $this->showGoalsList(1, $messageId);
+                break;
+
+            case (str_starts_with($callbackData, 'list_goals_page_')):
+                $page = (int) substr($callbackData, strlen('list_goals_page_'));
+                $this->showGoalsList($page, $messageId);
+                break;
+
+            case (str_starts_with($callbackData, 'show_goal_details_')):
+                $goalId = (int) substr($callbackData, strlen('show_goal_details_'));
+                $this->showGoalDetails($goalId, $messageId);
+                break;
+
+            case (str_starts_with($callbackData, 'delete_goal_')):
+                $goalId = (int) substr($callbackData, strlen('delete_goal_'));
+                $deleted = $this->db->deleteGoalById($goalId);
+                if ($deleted) {
+                    $this->answerCallbackQuery($this->callbackQueryId, "✅ گل با موفقیت حذف شد.", false);
+                    $this->sendRequest('deleteMessage', ['chat_id' => $chatId, 'message_id' => $messageId]);
+                    $this->showGoalsList(1);
+                } else {
+                    $this->answerCallbackQuery($this->callbackQueryId, "❌ خطا در حذف گل!", true);
+                }
                 break;
 
         }
@@ -437,6 +464,7 @@ class BotHandler
 
     private function sendGoalToUser(array $goal): void
     {
+        $this->sendRequest("sendMessage", ["chat_id" => $this->chatId, "text" => "✅ درحال ارسال ..."]);
         $method  = '';
         $chatId  = $this->chatId;
         $fileId  = $goal['file_id'];
@@ -474,8 +502,6 @@ class BotHandler
             $messageId = $response['result']['message_id'];
             $deleteAt  = date('Y-m-d H:i:s', time() + (20));
             $this->db->logScheduledDelete($goal['id'], $this->chatId, $messageId, $deleteAt);
-
-            $this->sendRequest("sendMessage", ["chat_id" => $this->chatId, "text" => "✅ درحال ارسال ..."]);
         }
     }
 
@@ -785,9 +811,9 @@ class BotHandler
             [
                 ['text' => '⚽ آپلود گل', 'callback_data' => 'admin_upload_goal'],
             ],
-            // [
-            //     ['text' => '📋 لیست گل‌ها', 'callback_data' => 'admin_list_goal'],
-            // ],
+            [
+                ['text' => '📋 لیست گل‌ها', 'callback_data' => 'admin_list_goal'],
+            ],
             [
                 ['text' => '⚙️ تنظیمات', 'callback_data' => 'admin_settings'],
             ],
@@ -858,5 +884,105 @@ class BotHandler
         ];
         $logMessage = json_encode($logData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         error_log('logMessage:' . print_r($logMessage, true));
+    }
+    private function showGoalsList(int $page = 1, ?int $messageId = null): void
+    {
+        $perPage    = 16;
+        $goals      = $this->db->getGoalsPaginated($page, $perPage);
+        $totalGoals = $this->db->getGoalsCount();
+        $totalPages = ceil($totalGoals / $perPage);
+
+        $text = "📋 *لیست گل‌ها (صفحه {$page} از {$totalPages})*\n\n";
+        $text .= "برای مشاهده جزئیات و حذف، روی هر گل کلیک کنید:";
+
+        if (empty($goals)) {
+            $text = "هیچ گلی برای نمایش وجود ندارد.";
+        }
+
+        $inlineKeyboard = [];
+        $row            = [];
+        foreach ($goals as $goal) {
+            // یک نام نمایشی برای دکمه ایجاد می‌کنیم
+            $buttonText = "گل #" . $goal['id'];
+            if (! empty($goal['caption'])) {
+                // نمایش 20 کاراکتر اول کپشن
+                $buttonText = mb_substr($goal['caption'], 0, 20) . '...';
+            }
+
+            $row[] = ['text' => $buttonText, 'callback_data' => 'show_goal_details_' . $goal['id']];
+
+            // اگر ردیف دو ستونه شد، آن را به کیبورد اضافه کن و ردیف جدید بساز
+            if (count($row) == 2) {
+                $inlineKeyboard[] = $row;
+                $row              = [];
+            }
+        }
+        // اگر تعداد آیتم‌ها فرد بود، آخرین ردیف تک ستونه را اضافه کن
+        if (! empty($row)) {
+            $inlineKeyboard[] = $row;
+        }
+
+        // ساخت دکمه‌های صفحه‌بندی (بعدی و قبلی)
+        $paginationButtons = [];
+        if ($page > 1) {
+            $paginationButtons[] = ['text' => '◀️ قبلی', 'callback_data' => 'list_goals_page_' . ($page - 1)];
+        }
+        if ($page < $totalPages) {
+            $paginationButtons[] = ['text' => 'بعدی ▶️', 'callback_data' => 'list_goals_page_' . ($page + 1)];
+        }
+        if (! empty($paginationButtons)) {
+            $inlineKeyboard[] = $paginationButtons;
+        }
+
+        $inlineKeyboard[] = [['text' => '⬅️ بازگشت به پنل ادمین', 'callback_data' => 'admin_panel']];
+
+        $data = [
+            'chat_id'      => $this->chatId,
+            'text'         => $text,
+            'parse_mode'   => 'Markdown',
+            'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
+        ];
+
+        // اگر messageId وجود داشت، پیام را ویرایش کن، در غیر این صورت پیام جدید بفرست
+        if ($messageId) {
+            $data['message_id'] = $messageId;
+            $this->sendRequest('editMessageText', $data);
+        } else {
+            // اگر از ابتدا لیست را باز می‌کنیم، پیام قبلی را حذف و پیام جدید ارسال می‌کنیم
+            $this->sendRequest('deleteMessage', ['chat_id' => $this->chatId, 'message_id' => $this->messageId]);
+            $this->sendRequest('sendMessage', $data);
+        }
+    }
+
+    private function showGoalDetails(int $goalId, int $messageId): void
+    {
+        $goal = $this->db->getGoalById($goalId);
+        if (! $goal) {
+            $this->answerCallbackQuery($this->callbackQueryId, "❌ گل مورد نظر یافت نشد!", true);
+            return;
+        }
+
+        // ابتدا پیام قبلی (لیست) را حذف می‌کنیم
+        $this->sendRequest('deleteMessage', ['chat_id' => $this->chatId, 'message_id' => $messageId]);
+
+        // آماده‌سازی پارامترها برای ارسال رسانه
+        $method = 'send' . ucfirst($goal['type']);
+        $params = [
+            'chat_id'      => $this->chatId,
+            'caption'      => $goal['caption'] . "\n\n" . "آیا مایل به حذف این گل هستید؟",
+            $goal['type']  => $goal['file_id'], // 'video' => file_id, 'photo' => file_id, etc.
+            'reply_markup' => json_encode([
+                'inline_keyboard' => [
+                    [
+                        ['text' => '❌ حذف گل', 'callback_data' => 'delete_goal_' . $goalId],
+                    ],
+                    [
+                        ['text' => '⬅️ بازگشت به لیست', 'callback_data' => 'admin_list_goal'],
+                    ],
+                ],
+            ]),
+        ];
+
+        $this->sendRequest($method, $params);
     }
 }

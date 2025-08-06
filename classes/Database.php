@@ -357,4 +357,40 @@ class Database
         $stmt->execute([$userId]);
         return $stmt->fetch();
     }
+    public function getGoalsPaginated(int $page = 1, int $perPage = 16): array
+    {
+        $offset = ($page - 1) * $perPage;
+        try {
+            $stmt = $this->pdo->prepare("SELECT id, caption, type FROM goals ORDER BY id DESC LIMIT :limit OFFSET :offset");
+            $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll();
+        } catch (PDOException $e) {
+            error_log("❌ Failed to get paginated goals: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getGoalsCount(): int
+    {
+        try {
+            $stmt = $this->pdo->query("SELECT COUNT(id) FROM goals");
+            return (int) $stmt->fetchColumn();
+        } catch (PDOException $e) {
+            error_log("❌ Failed to get goals count: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    public function deleteGoalById(int $goalId): bool
+    {
+        try {
+            $stmt = $this->pdo->prepare("DELETE FROM goals WHERE id = ?");
+            return $stmt->execute([$goalId]);
+        } catch (PDOException $e) {
+            error_log("❌ Failed to delete goal: " . $e->getMessage());
+            return false;
+        }
+    }
 }
