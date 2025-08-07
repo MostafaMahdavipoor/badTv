@@ -809,32 +809,36 @@ class BotHandler
     }
     public function AdminMenu($messageId = null): void
     {
-        $panelText = "👨‍💻 <b>پنل مدیریت ربات</b>\n\n";
-        $panelText .= "ادمین عزیز، خوش آمدید. لطفاً یک گزینه را انتخاب کنید:";
+        $persianDate = jdf::jdate("l, j F Y");
+
+        $panelText = " پنل مدیریت ربات خوش آمدید \n\n";
+        $panelText .= "امروز: `$persianDate`\n\n";
+        $panelText .= "برای مدیریت بخش‌های مختلف، یکی از گزینه‌های زیر را انتخاب کنید:";
 
         $inlineKeyboard = [
             [
-                ['text' => '⚽ آپلود گل', 'callback_data' => 'admin_upload_goal'],
-                ['text' => '📋 لیست گل‌ها', 'callback_data' => 'admin_list_goal'],
+                ['text' => '➕ ارسال یک گل جدید', 'callback_data' => 'admin_upload_goal'],
             ],
             [
-                ['text' => '📊 آمار ربات', 'callback_data' => 'bot_stats'],
+                ['text' => '🗂 مدیریت گل‌های ارسالی', 'callback_data' => 'admin_list_goal'],
             ],
             [
-                ['text' => '⚙️ تنظیمات', 'callback_data' => 'admin_settings'],
+                ['text' => '📈 مشاهده آمار دقیق', 'callback_data' => 'bot_stats'],
+            ],
+            [
+                ['text' => '🛠 تنظیمات اصلی ربات', 'callback_data' => 'admin_settings'],
             ],
         ];
-        // ابتدا پارامترهای مشترک را تعریف می‌کنیم
+
         $data = [
             'chat_id'      => $this->chatId,
             'text'         => $panelText,
-            'parse_mode'   => 'HTML',
+            'parse_mode'   => 'Markdown',
             'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
         ];
 
         if ($messageId === null) {
             $method = 'sendMessage';
-
         } else {
             $method             = 'editMessageText';
             $data['message_id'] = $messageId;
