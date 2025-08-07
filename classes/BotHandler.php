@@ -1017,31 +1017,31 @@ class BotHandler
         $month     = number_format($this->db->getActiveUsersCount('month'));
 
         // 3. Build the message string in English with <blockquote>
-        $message = "<b>📊 Bot Statistics & Status</b> #Status\n";
+        $message = "<b>📊 وضعیت ربات</b> \n";
 
         // --- Users Section ---
         $message .= "<blockquote>";
-        $message .= "👥 <b>Users:</b> | All: <code>" . $totalUsers . "</code> | 🚫 Blocked: <code>" . $blockedUsers . "</code>\n";
+        $message .= "👥 <b>کاربران:</b> | همه: <code>" . $totalUsers . "</code> | 🚫 بلاک: <code>" . $blockedUsers . "</code>\n";
         $message .= "</blockquote>";
 
         // --- User Join Stats Section ---
         $message .= "<blockquote>";
-        $message .= "💹 <b>User Join Stats:</b>\n";
-        $message .= "▫️ <i>Today:</i> <code>" . $joinedToday . "</code> | <i>Yesterday:</i> <code>" . $joinedYesterday . "</code>\n";
-        $message .= "▫️ <i>Last Week:</i> <code>" . $joinedWeek . "</code> | <i>Last Month:</i> <code>" . $joinedMonth . "</code>\n";
+        $message .= "💹 <b>یوزر ها:</b>\n";
+        $message .= "▫️ <i>امروز:</i> <code>" . $joinedToday . "</code> | <i>دیروز:</i> <code>" . $joinedYesterday . "</code>\n";
+        $message .= "▫️ <i>این هفته:</i> <code>" . $joinedWeek . "</code> | <i>این ماه :</i> <code>" . $joinedMonth . "</code>\n";
         $message .= "</blockquote>";
 
         // --- User Activity Section ---
         $message .= "<blockquote>";
-        $message .= "🟢 <b>User Activity:</b>\n";
-        $message .= "▫️ <i>Online:</i> <code>" . $online . "</code> | <i>Last Hour:</i> <code>" . $lastHour . "</code>\n";
-        $message .= "▫️ <i>Active Yesterday:</i> <code>" . $yesterday . "</code>\n";
-        $message .= "▫️ <i>Active Week:</i> <code>" . $week . "</code> | <i>Active Month:</i> <code>" . $month . "</code>\n";
+        $message .= "🟢 <b> تعداد کاربران فعال: </b>\n";
+        $message .= "▫️ <i>آنلاین:</i> <code>" . $online . "</code> | <i>ساعت گذشته:</i> <code>" . $lastHour . "</code>\n";
+        $message .= "▫️ <i>دیروز:</i> <code>" . $yesterday . "</code>\n";
+        $message .= "▫️ <i>این هفته :</i> <code>" . $week . "</code> | <i>این ماه:</i> <code>" . $month . "</code>\n";
         $message .= "</blockquote>";
 
         // --- Content Stats Section ---
         $message .= "<blockquote>";
-        $message .= "🗂 <b>Content (Goals) Stats:</b>\n";
+        $message .= "🗂 <b>تعداد فایل ها :</b>\n";
 
         $totalFiles = number_format($goalStats['total'] ?? 0);
         $videos     = number_format($goalStats['video'] ?? 0);
@@ -1049,16 +1049,16 @@ class BotHandler
         $animations = number_format($goalStats['animation'] ?? 0);
         $documents  = number_format($goalStats['document'] ?? 0);
 
-        $message .= "▫️ 🎥 <b>Video:</b> <code>" . $videos . "</code> | 🖼️ <b>Photo:</b> <code>" . $photos . "</code>\n";
-        $message .= "▫️ 🎞️ <b>Animation:</b> <code>" . $animations . "</code> | 📄 <b>Document:</b> <code>" . $documents . "</code>\n\n";
-        $message .= "▫️ <b>Total Files:</b> <code>" . $totalFiles . "</code>\n";
+        $message .= "▫️ 🎥 <b>ویدو:</b> <code>" . $videos . "</code> | 🖼️ <b>عکس:</b> <code>" . $photos . "</code>\n";
+        $message .= "▫️ 🎞️ <b>گیف:</b> <code>" . $animations . "</code> | 📄 <b>فایل:</b> <code>" . $documents . "</code>\n\n";
+        $message .= "▫️ <b>همه فایل ها:</b> <code>" . $totalFiles . "</code>\n";
         $message .= "</blockquote>";
 
         // --- Management Section ---
         $adminCount   = number_format(count($allAdmins));
         $channelCount = number_format(count($allChannels));
         $message .= "<blockquote>";
-        $message .= "🛡 <b>Management:</b> | 👑 <i>Admins:</i> <code>" . $adminCount . "</code> | 📢 <i>Channels:</i> <code>" . $channelCount . "</code>\n";
+        $message .= "🛡 <b>مدیریت:</b> | 👑 <i>ادمین ها:</i> <code>" . $adminCount . "</code> | 📢 <i>کانال های فعال:</i> <code>" . $channelCount . "</code>\n";
         $message .= "</blockquote>";
 
         $inlineKeyboard = [
