@@ -993,16 +993,15 @@ class BotHandler
 
         $this->sendRequest($method, $params);
     }
-
     private function showBotStats(int $messageId): void
     {
-        // ۱. دریافت آمار از پایگاه داده
+        // 1. Fetch statistics from your database
         $userStats   = $this->db->getUserStats();
-        $goalStats   = $this->db->getGoalsStats(); // آمار فایل‌ها از اینجا می‌آید
+        $goalStats   = $this->db->getGoalsStats(); // File data comes from here
         $allAdmins   = $this->db->getAdmins();
         $allChannels = $this->db->getAllChannels();
 
-        // ۲. آماده‌سازی متغیرهای آمار کاربران
+        // 2. Prepare user statistics variables
         $totalUsers      = number_format($userStats['total_users']);
         $blockedUsers    = number_format($userStats['blocked_users']);
         $joinedToday     = number_format($this->db->getNewUsersCount('today'));
@@ -1010,38 +1009,39 @@ class BotHandler
         $joinedWeek      = number_format($this->db->getNewUsersCount('week'));
         $joinedMonth     = number_format($this->db->getNewUsersCount('month'));
 
-        // آمار فعالیت کاربران
+        // User activity statistics
         $online    = number_format($this->db->getActiveUsersCount('online'));
         $lastHour  = number_format($this->db->getActiveUsersCount('hour'));
         $yesterday = number_format($this->db->getActiveUsersCount('yesterday'));
         $week      = number_format($this->db->getActiveUsersCount('week'));
         $month     = number_format($this->db->getActiveUsersCount('month'));
 
-        // ۳. ساخت پیام نهایی به زبان فارسی
-        $message = "<b>📊 آمار و وضعیت ربات</b> #آمار\n\n";
+        // 3. Build the message string in English with <blockquote>
+        $message = "<b>📊 Bot Statistics & Status</b> #Status\n";
 
-        // --- بخش کاربران ---
-        $message .= "<b>👥 کاربران</b>\n";
-        $message .= "<code>--------------------</code>\n";
-        $message .= "▫️ کل کاربران: <code>" . $totalUsers . "</code>\n";
-        $message .= "▫️ مسدود شده: <code>" . $blockedUsers . "</code>\n\n";
+        // --- Users Section ---
+        $message .= "<blockquote>";
+        $message .= "👥 <b>Users:</b> | All: <code>" . $totalUsers . "</code> | 🚫 Blocked: <code>" . $blockedUsers . "</code>\n";
+        $message .= "</blockquote>";
 
-        // --- بخش آمار عضویت ---
-        $message .= "<b>💹 آمار عضویت</b>\n";
-        $message .= "<code>--------------------</code>\n";
-        $message .= "▫️ امروز: <code>" . $joinedToday . "</code> | دیروز: <code>" . $joinedYesterday . "</code>\n";
-        $message .= "▫️ هفته گذشته: <code>" . $joinedWeek . "</code> | ماه گذشته: <code>" . $joinedMonth . "</code>\n\n";
+        // --- User Join Stats Section ---
+        $message .= "<blockquote>";
+        $message .= "💹 <b>User Join Stats:</b>\n";
+        $message .= "▫️ <i>Today:</i> <code>" . $joinedToday . "</code> | <i>Yesterday:</i> <code>" . $joinedYesterday . "</code>\n";
+        $message .= "▫️ <i>Last Week:</i> <code>" . $joinedWeek . "</code> | <i>Last Month:</i> <code>" . $joinedMonth . "</code>\n";
+        $message .= "</blockquote>";
 
-        // --- بخش فعالیت کاربران ---
-        $message .= "<b>🟢 فعالیت کاربران</b>\n";
-        $message .= "<code>--------------------</code>\n";
-        $message .= "▫️ آنلاین: <code>" . $online . "</code> | ساعت گذشته: <code>" . $lastHour . "</code>\n";
-        $message .= "▫️ فعال در دیروز: <code>" . $yesterday . "</code>\n";
-        $message .= "▫️ فعال در هفته: <code>" . $week . "</code> | فعال در ماه: <code>" . $month . "</code>\n\n";
+        // --- User Activity Section ---
+        $message .= "<blockquote>";
+        $message .= "🟢 <b>User Activity:</b>\n";
+        $message .= "▫️ <i>Online:</i> <code>" . $online . "</code> | <i>Last Hour:</i> <code>" . $lastHour . "</code>\n";
+        $message .= "▫️ <i>Active Yesterday:</i> <code>" . $yesterday . "</code>\n";
+        $message .= "▫️ <i>Active Week:</i> <code>" . $week . "</code> | <i>Active Month:</i> <code>" . $month . "</code>\n";
+        $message .= "</blockquote>";
 
-        // --- بخش آمار محتوا ---
-        $message .= "<b>� آمار محتوا (فایل‌ها)</b>\n";
-        $message .= "<code>--------------------</code>\n";
+        // --- Content Stats Section ---
+        $message .= "<blockquote>";
+        $message .= "🗂 <b>Content (Goals) Stats:</b>\n";
 
         $totalFiles = number_format($goalStats['total'] ?? 0);
         $videos     = number_format($goalStats['video'] ?? 0);
@@ -1049,22 +1049,24 @@ class BotHandler
         $animations = number_format($goalStats['animation'] ?? 0);
         $documents  = number_format($goalStats['document'] ?? 0);
 
-        $message .= "▫️ 🎥 ویدیو: <code>" . $videos . "</code> | 🖼️ عکس: <code>" . $photos . "</code>\n";
-        $message .= "▫️ 🎞️ انیمیشن: <code>" . $animations . "</code> | 📄 سند: <code>" . $documents . "</code>\n\n";
-        $message .= "▫️ <b>مجموع فایل‌ها:</b> <code>" . $totalFiles . "</code>\n\n";
+        $message .= "▫️ 🎥 <b>Video:</b> <code>" . $videos . "</code> | 🖼️ <b>Photo:</b> <code>" . $photos . "</code>\n";
+        $message .= "▫️ 🎞️ <b>Animation:</b> <code>" . $animations . "</code> | 📄 <b>Document:</b> <code>" . $documents . "</code>\n\n";
+        $message .= "▫️ <b>Total Files:</b> <code>" . $totalFiles . "</code>\n";
+        $message .= "</blockquote>";
 
-        // --- بخش مدیریت ---
+        // --- Management Section ---
         $adminCount   = number_format(count($allAdmins));
         $channelCount = number_format(count($allChannels));
-        $message .= "<b>🛡 مدیریت</b>\n";
-        $message .= "<code>--------------------</code>\n";
-        $message .= "▫️ 👑 ادمین‌ها: <code>" . $adminCount . "</code> | 📢 کانال‌ها: <code>" . $channelCount . "</code>\n";
+        $message .= "<blockquote>";
+        $message .= "🛡 <b>Management:</b> | 👑 <i>Admins:</i> <code>" . $adminCount . "</code> | 📢 <i>Channels:</i> <code>" . $channelCount . "</code>\n";
+        $message .= "</blockquote>";
 
         $inlineKeyboard = [
             [['text' => '⬅️ بازگشت به پنل', 'callback_data' => 'admin_panel']],
+            // [['text' => '👤 ۱۰ کاربر آخر', 'callback_data' => 'last_10_users']],
+            // [['text' => '🚫 ۱۰ کاربر مسدود شده آخر', 'callback_data' => 'last_10_blocked']],
         ];
-
-        // ۴. ارسال درخواست نهایی به تلگرام
+        // 4. Send the final request to Telegram
         $this->sendRequest('editMessageText', [
             'chat_id'      => $this->chatId,
             'message_id'   => $messageId,
@@ -1073,6 +1075,5 @@ class BotHandler
             'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
         ]);
     }
-    
 
 }
