@@ -994,74 +994,93 @@ class BotHandler
         $this->sendRequest($method, $params);
     }
     private function showBotStats(int $messageId): void
-    {
-        // دریافت آمار از دیتابیس
-        $userStats   = $this->db->getUserStats();
-        $goalStats   = $this->db->getGoalsStats();
-        $allAdmins   = $this->db->getAdmins();
-        $allChannels = $this->db->getAllChannels();
+{
+    // 1. Fetch statistics from your database
+    $userStats   = $this->db->getUserStats();
+    $goalStats   = $this->db->getGoalsStats(); // File data comes from here
+    $allAdmins   = $this->db->getAdmins();
+    $allChannels = $this->db->getAllChannels();
 
-        // مقادیر را برای خوانایی بهتر در متغیرها می‌ریزیم
-        $totalUsers      = number_format($userStats['total_users']);
-        $blockedUsers    = number_format($userStats['blocked_users']);
-        $joinedToday     = number_format($this->db->getNewUsersCount('today'));
-        $joinedYesterday = number_format($this->db->getNewUsersCount('yesterday'));
-        $activeWeek      = number_format($this->db->getNewUsersCount('week'));
-        $activeMonth     = number_format($this->db->getNewUsersCount('month'));
-        $online          = number_format($this->db->getActiveUsersCount('online'));
+    // 2. Prepare user statistics variables
+    $totalUsers      = number_format($userStats['total_users']);
+    $blockedUsers    = number_format($userStats['blocked_users']);
+    $joinedToday     = number_format($this->db->getNewUsersCount('today'));
+    $joinedYesterday = number_format($this->db->getNewUsersCount('yesterday'));
+    $joinedWeek      = number_format($this->db->getNewUsersCount('week'));
+    $joinedMonth     = number_format($this->db->getNewUsersCount('month'));
 
-        // --- شروع ساخت متن پیام ---
-        $text = "📊 <b>آمار کلی ربات شما</b> 📊\n\n";
+    // User activity statistics
+    $online    = number_format($this->db->getActiveUsersCount('online'));
+    $lastHour  = number_format($this->db->getActiveUsersCount('hour'));
+    $yesterday = number_format($this->db->getActiveUsersCount('yesterday'));
+    $week      = number_format($this->db->getActiveUsersCount('week'));
+    $month     = number_format($this->db->getActiveUsersCount('month'));
 
-        // بخش کاربران
-        $text .= "👤 <b>کاربران</b>\n";
-        $text .= "<code>----------------------------</code>\u{200F}\n";
-        $text .= "▫️ <b>کل اعضا:</b> {$totalUsers}\n";
-        $text .= "▫️ <b>بلاک شده‌ها:</b> {$blockedUsers}\n";
-        $text .= "▫️ <b> انلاین:</b> {$online}\n";
-        $text .= "<code>----------------------------</code>\u{200F}\n";
-        $text .= "▫️ <b>امروز:</b> {$joinedToday}\n";
-        $text .= "▫️ <b>دیروز:</b> {$joinedYesterday}\n";
-        $text .= "▫️ <b>هفته:</b> {$activeWeek} \n";
-        $text .= "▫️ <b>ماه:</b> {$activeMonth}\n\n";
+    // 3. Build the message string in English with <blockquote>
+    $message = "<b>📊 Bot Statistics & Status</b> #Status\n";
 
-        // بخش محتوا
-        $totalFiles = number_format($goalStats['total']);
-        $videos     = number_format($goalStats['video'] ?? 0);
-        $photos     = number_format($goalStats['photo'] ?? 0);
-        $animations = number_format($goalStats['animation'] ?? 0);
-        $documents  = number_format($goalStats['document'] ?? 0);
+    // --- Users Section ---
+    $message .= "<blockquote>";
+    $message .= "👥 <b>Users:</b> | All: <code>" . $totalUsers . "</code> | 🚫 Blocked: <code>" . $blockedUsers . "</code>\n";
+    $message .= "</blockquote>";
 
-        $text .= "🗂 <b>محتوا</b>\n";
-        $text .= "<code>----------------------------</code>\u{200F}\n";
-        $text .= "▫️ <b>کل فایل‌ها:</b> {$totalFiles}\n";
-        $text .= "<code>----------------------------</code>\u{200F}\n";
-        $text .= "📹 <b>ویدیو:</b> {$videos} \n";
-        $text .= "🏞 <b>عکس:</b> {$photos}\n";
-        $text .= "🎞 <b>گیف:</b> {$animations}\n";
-        $text .= "📄 <b>فایل‌ها:</b> {$documents}\n\n";
+    // --- User Join Stats Section ---
+    $message .= "<blockquote>";
+    $message .= "💹 <b>User Join Stats:</b>\n";
+    $message .= "▫️ <i>Today:</i> <code>" . $joinedToday . "</code> | <i>Yesterday:</i> <code>" . $joinedYesterday . "</code>\n";
+    $message .= "▫️ <i>Last Week:</i> <code>" . $joinedWeek . "</code> | <i>Last Month:</i> <code>" . $joinedMonth . "</code>\n";
+    $message .= "</blockquote>";
 
-        // بخش مدیریت
-        $adminCount   = count($allAdmins);
-        $channelCount = count($allChannels);
+    // --- User Activity Section ---
+    $message .= "<blockquote>";
+    $message .= "🟢 <b>User Activity:</b>\n";
+    $message .= "▫️ <i>Online:</i> <code>" . $online . "</code> | <i>Last Hour:</i> <code>" . $lastHour . "</code>\n";
+    $message .= "▫️ <i>Active Yesterday:</i> <code>" . $yesterday . "</code>\n";
+    $message .= "▫️ <i>Active Week:</i> <code>" . $week . "</code> | <i>Active Month:</i> <code>" . $month . "</code>\n";
+    $message .= "</blockquote>";
+    
+    // --- Content Stats Section ---
+    $message .= "<blockquote>";
+    $message .= "🗂 <b>Content (Goals) Stats:</b>\n";
 
-        $text .= "🛡 <b>مدیریت</b>\n";
-        $text .= "<code>----------------------------</code>\u{200F}\n";
-        $text .= "▫️ <b>ادمین‌ها:</b> {$adminCount} | ▫️ <b>کانال‌ها:</b> {$channelCount}\n\n";
+    $totalFiles = number_format($goalStats['total'] ?? 0);
+    $videos     = number_format($goalStats['video'] ?? 0);
+    $photos     = number_format($goalStats['photo'] ?? 0);
+    $animations = number_format($goalStats['animation'] ?? 0);
+    $documents  = number_format($goalStats['document'] ?? 0);
 
-        // --- کیبورد ---
-        $keyboard = [
-            [['text' => '⬅️ بازگشت به پنل', 'callback_data' => 'admin_panel']],
-        ];
+    $message .= "▫️ 🎥 <b>Video:</b> <code>" . $videos . "</code> | 🖼️ <b>Photo:</b> <code>" . $photos . "</code>\n";
+    $message .= "▫️ 🎞️ <b>Animation:</b> <code>" . $animations . "</code> | 📄 <b>Document:</b> <code>" . $documents . "</code>\n\n";
+    $message .= "▫️ <b>Total Files:</b> <code>" . $totalFiles . "</code>\n";
+    $message .= "</blockquote>";
+    
+    // --- Management Section ---
+    $adminCount   = number_format(count($allAdmins));
+    $channelCount = number_format(count($allChannels));
+    $message .= "<blockquote>";
+    $message .= "🛡 <b>Management:</b> | 👑 <i>Admins:</i> <code>" . $adminCount . "</code> | 📢 <i>Channels:</i> <code>" . $channelCount . "</code>\n";
+    $message .= "</blockquote>";
 
-        // --- ارسال درخواست ---
-        $this->sendRequest('editMessageText', [
-            'chat_id'      => $this->chatId,
-            'message_id'   => $messageId,
-            'text'         => $text,
-            'parse_mode'   => 'HTML', // حتما باید HTML باشد
-            'reply_markup' => json_encode(['inline_keyboard' => $keyboard]),
-        ]);
-    }
+    // Your predefined keyboard
+    $inlineKeyboard = [
+        [
+            ["text" => "👤 10 Last Users", "callback_data" => "show_last_users"],
+            ["text" => "🚫 10 Last Blocked Users", "callback_data" => "show_last_blocked_users"],
+        ],
+        [
+            ["text" => "🔗 Top Link", "callback_data" => "show_top_link"],
+            ["text" => "📂 Top Files", "callback_data" => "show_top_items"],
+        ],
+    ];
+    
+    // 4. Send the final request to Telegram
+    $this->sendRequest('editMessageText', [
+        'chat_id'      => $this->chatId,
+        'message_id'   => $messageId,
+        'text'         => $message,
+        'parse_mode'   => 'HTML',
+        'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
+    ]);
+}
 
 }
