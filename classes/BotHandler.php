@@ -344,28 +344,24 @@ class BotHandler
                 $page = (int) substr($callbackData, strlen('list_goals_page_'));
                 $this->showGoalsList($page, $messageId);
                 break;
+        }
 
-            case (preg_match('/^show_goal_details_(\d+)_(\d+)$/', $callbackData, $matches)):
-                $goalId = (int) $matches[1];
-                $page   = (int) $matches[2];
-                $this->showGoalDetails($goalId, $messageId, $page);
-                break;
+        if (preg_match('/^show_goal_details_(\d+)_(\d+)$/', $callbackData, $matches)) {
+            $goalId = (int) $matches[1];
+            $page   = (int) $matches[2];
+            $this->showGoalDetails($goalId, $messageId, $page);
 
-            case (preg_match('/^delete_goal_(\d+)_(\d+)$/', $callbackData, $matches)):
-                $goalId  = (int) $matches[1];
-                $page    = (int) $matches[2];
-                $deleted = $this->db->deleteGoalById($goalId);
-
-                if ($deleted) {
-                    $this->answerCallbackQuery($this->callbackQueryId, "✅ گل با موفقیت حذف شد.", false);
-                    // حذف پیام جزئیات و بازگشت به لیست
-                    $this->deleteMessageWithDelay($messageId);
-                    $this->showGoalsList($page, null); // ارسال پیام جدید لیست
-                } else {
-                    $this->answerCallbackQuery($this->callbackQueryId, "❌ خطا در حذف گل!", true);
-                }
-                break;
-
+        } elseif (preg_match('/^delete_goal_(\d+)_(\d+)$/', $callbackData, $matches)) {
+            $goalId  = (int) $matches[1];
+            $page    = (int) $matches[2];
+            $deleted = $this->db->deleteGoalById($goalId);
+            if ($deleted) {
+                $this->answerCallbackQuery($this->callbackQueryId, "✅ گل با موفقیت حذف شد.", false);
+                $this->deleteMessageWithDelay($messageId);
+                $this->showGoalsList($page, null);
+            } else {
+                $this->answerCallbackQuery($this->callbackQueryId, "❌ خطا در حذف گل!", true);
+            }
         }
 
     }
