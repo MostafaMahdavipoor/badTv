@@ -1,96 +1,100 @@
 <?php
+require __DIR__ . '/../vendor/autoload.php';
 
-// فایل را در ریشه پروژه خود قرار دهید
-require __DIR__ . '/vendor/autoload.php';
-
-use Config\AppConfig;
 use Bot\Database;
+use Config\AppConfig;
 
-// --- تنظیمات کنترل سرعت ---
-$requestsPerSecond = 15;    // حداکثر 15 درخواست در هر ثانیه
-$workDuration      = 10;    // مدت زمان کار (به ثانیه)
-$restDuration      = 5;     // مدت زمان استراحت (به ثانیه)
-$idleSleep         = 5;     // مدت زمان استراحت وقتی کاری برای انجام نیست (به ثانیه)
-// ---------------------------------
+function sendTelegramRequest(string $method, array $params, string $token): array|null {
+    $url = "https://api.telegram.org/bot{$token}/{$method}";
 
-$timeBetweenRequests = 1 / $requestsPerSecond;
-$config = AppConfig::getConfig();
-$botToken = $config['bot']['token'];
-
-function sendTelegramRequest(string $token, string $method, array $data): bool
-{
-    // این تابع بدون تغییر باقی می‌ماند
-    $url = "https://api.telegram.org/bot" . $token . "/" . $method;
     $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => json_encode($params),
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+    ]);
+
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlError = curl_error($ch);
     curl_close($ch);
 
-    if ($curlError) {
-        echo "cURL Error: " . $curlError . "\n";
-        return false;
+    if ($response === false) {
+        return null;
     }
 
-    $decodedResponse = json_decode($response, true);
-    // اگر پیام قبلا حذف شده باشد (کد 400)، آن را به عنوان موفقیت در نظر می‌گیریم
-    return ($httpCode === 200 && ($decodedResponse['ok'] ?? false) === true) || ($httpCode === 400);
+    return [
+        'http_code' => $httpCode,
+        'body'      => json_decode($response, true),
+        'raw'       => $response
+    ];
 }
 
-echo "✅ Worker process started. Waiting for tasks...\n";
+function sendToTelegramChannel(string $message): void {
+    $config = AppConfig::getConfig();
+    sendTelegramRequest('sendMessage', [
+        'chat_id'    => '@mybugsram',
+        'text'       => $message,
+        'parse_mode' => 'HTML',
+    ], $config['notification_bot_token']);
+}
 
-// حلقه بی‌نهایت برای اجرای دائمی اسکریپت
-while (true) {
+function deleteTelegramMessage(string $chatId, int $messageId, string $botToken): bool {
+    $response = sendTelegramRequest('deleteMessage', [
+        'chat_id'    => $chatId,
+        'message_id' => $messageId
+    ], $botToken);
+
+    if (!$response) return false;
+
+    $http = $response['http_code'];
+    $body = $response['body'];
+
+    return ($http === 200 && $body['ok']) ||
+           ($http === 400 && isset($body['description']) && str_contains($body['description'], 'message to delete not found'));
+}
+
+function runDeletionLogic(): int {
+    $processedCount = 0;
+
     try {
         $db = new Database();
-        $messagesToDelete = $db->getDueDeletions();
+        $tasks = $db->getDueDeletions();
+        if (empty($tasks)) return 0;
 
-        if (empty($messagesToDelete)) {
-            // اگر پیامی برای حذف نبود، ۵ ثانیه صبر کن و دوباره چک کن
-            // echo "No messages to delete. Sleeping for {$idleSleep} seconds...\n";
-            sleep($idleSleep);
-            continue; // برو به ابتدای حلقه
-        }
+        $botToken = AppConfig::getConfig()['bot']['token'];
 
-       
-        $workCycleStartTime = microtime(true);
+        foreach ($tasks as $task) {
+            $chatId = $task['chat_id'];
+            $messageId = $task['message_id'];
 
-        foreach ($messagesToDelete as $message) {
-            $elapsedWorkTime = microtime(true) - $workCycleStartTime;
-            if ($elapsedWorkTime >= $workDuration) {          
-                sleep($restDuration);
-                $workCycleStartTime = microtime(true);
-            }
-            
-            $requestStartTime = microtime(true);
-
-            $logId = $message['id'];
-            $chatId = $message['chat_id'];
-            $messageId = $message['message_id'];
-
-            if (sendTelegramRequest($botToken, 'deleteMessage', ['chat_id' => $chatId, 'message_id' => $messageId])) {
-                $db->removeDeletionLog($logId);
+            if (deleteTelegramMessage($chatId, $messageId, $botToken)) {
+                $db->removeDeletionLog($task['id']);
+                $processedCount++;
             } else {
-                echo " -> Failed to delete message #{$messageId}. Log will be kept for retry.\n";
-            }
-
-            // کنترل سرعت برای جلوگیری از محدود شدن توسط تلگرام
-            $requestEndTime = microtime(true);
-            $elapsedRequestTime = $requestEndTime - $requestStartTime;
-            $sleepDuration = $timeBetweenRequests - $elapsedRequestTime;
-
-            if ($sleepDuration > 0) {
-                usleep($sleepDuration * 1000000);
+                error_log("❌ Failed to delete message {$messageId} in chat {$chatId}");
             }
         }
-    } catch (Throwable $e) {
-        // در صورت بروز هرگونه خطا (مثلا قطعی دیتابیس)، خطا را نمایش بده و ۱۰ ثانیه صبر کن
-        echo "❌ An error occurred: " . $e->getMessage() . "\n";
-        echo "Waiting for 10 seconds before retrying...\n";
-        sleep(10);
+    } catch (Exception $e) {
+        $errorMessage = "<b>❌ خطای بحرانی در کرون جاب</b>\n\n";
+        $errorMessage .= "متن خطا:\n<code>" . htmlspecialchars($e->getMessage()) . "</code>";
+        sendToTelegramChannel($errorMessage);
+        error_log("Exception in runDeletionLogic: " . $e->getMessage());
     }
+
+    return $processedCount;
+}
+
+$totalProcessed = 0;
+
+for ($i = 0; $i < 3; $i++) {
+    $totalProcessed += runDeletionLogic();
+    if ($i < 2) sleep(15);
+}
+
+if ($totalProcessed > 0) {
+    $message = "<b>✅ گزارش کرون جاب حذف پیام</b>\n\n";
+    $message .= "تعداد پیام‌های حذف‌شده: <b>{$totalProcessed}</b>\n";
+    $message .= "تاریخ و زمان: " . date('Y-m-d H:i:s');
+    sendToTelegramChannel($message);
 }

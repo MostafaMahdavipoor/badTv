@@ -506,10 +506,10 @@ class BotHandler
 
         if ($response && $response['ok']) {
             $messageId = $response['result']['message_id'];
-            $deleteAt  = date('Y-m-d H:i:s', time() + (20));
+            $deleteAt  = date('Y-m-d H:i:s', time() + (15));
             $this->db->logScheduledDelete($goal['id'], $this->chatId, $messageId, $deleteAt);
-            sleep(20);
-            $this->deleteMessageWithDelay($messageId);
+           
+            
         }
     }
 
