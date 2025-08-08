@@ -347,7 +347,7 @@ class BotHandler
             case (str_starts_with($callbackData, 'back_list_goals_page_')):
                 $this->deleteMessageWithDelay();
                 $page = (int) substr($callbackData, strlen('list_goals_page_'));
-                $this->showGoalsList($page);
+                $this->showGoalsList(1);
                 break;
         }
 
