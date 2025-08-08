@@ -4,7 +4,10 @@ require __DIR__ . '/../vendor/autoload.php';
 use Bot\Database;
 use Config\AppConfig;
 
-function sendTelegramRequest(string $method, array $params, string $token): array|null {
+function sendTelegramRequest(string $method, array $params): array|null {
+    $config = AppConfig::getConfig();
+    $token  = $config['bot']['token'];
+
     $url = "https://api.telegram.org/bot{$token}/{$method}";
 
     $ch = curl_init($url);
@@ -36,14 +39,14 @@ function sendToTelegramChannel(string $message): void {
         'chat_id'    => '@mybugsram',
         'text'       => $message,
         'parse_mode' => 'HTML',
-    ], $config['notification_bot_token']);
+    ]);
 }
 
 function deleteTelegramMessage(string $chatId, int $messageId, string $botToken): bool {
     $response = sendTelegramRequest('deleteMessage', [
         'chat_id'    => $chatId,
         'message_id' => $messageId
-    ], $botToken);
+    ]);
 
     if (!$response) return false;
 
@@ -65,7 +68,7 @@ function runDeletionLogic(): int {
         $botToken = AppConfig::getConfig()['bot']['token'];
 
         foreach ($tasks as $task) {
-            $chatId = $task['chat_id'];
+            $chatId    = $task['chat_id'];
             $messageId = $task['message_id'];
 
             if (deleteTelegramMessage($chatId, $messageId, $botToken)) {
@@ -76,7 +79,7 @@ function runDeletionLogic(): int {
             }
         }
     } catch (Exception $e) {
-        $errorMessage = "<b>❌ خطای بحرانی در کرون جاب</b>\n\n";
+        $errorMessage  = "<b>❌ خطای بحرانی در کرون جاب</b>\n\n";
         $errorMessage .= "متن خطا:\n<code>" . htmlspecialchars($e->getMessage()) . "</code>";
         sendToTelegramChannel($errorMessage);
         error_log("Exception in runDeletionLogic: " . $e->getMessage());
@@ -84,16 +87,19 @@ function runDeletionLogic(): int {
 
     return $processedCount;
 }
+$startTime       = time();
+$durationSeconds = 55;
+$totalProcessed  = 0;
 
-$totalProcessed = 0;
+while ((time() - $startTime) < $durationSeconds) {
+    $processed = runDeletionLogic();
+    $totalProcessed += $processed;
 
-for ($i = 0; $i < 3; $i++) {
-    $totalProcessed += runDeletionLogic();
-    if ($i < 2) sleep(15);
+    sleep(2);
 }
 
 if ($totalProcessed > 0) {
-    $message = "<b>✅ گزارش کرون جاب حذف پیام</b>\n\n";
+    $message  = "<b>✅ گزارش کرون جاب حذف پیام</b>\n\n";
     $message .= "تعداد پیام‌های حذف‌شده: <b>{$totalProcessed}</b>\n";
     $message .= "تاریخ و زمان: " . date('Y-m-d H:i:s');
     sendToTelegramChannel($message);
