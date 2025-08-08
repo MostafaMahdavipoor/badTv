@@ -23,6 +23,7 @@ function sendTelegramRequest(string $method, array $params): array|null {
     curl_close($ch);
 
     if ($response === false) {
+        
         return null;
     }
 

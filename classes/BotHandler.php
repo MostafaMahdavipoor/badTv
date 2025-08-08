@@ -3,6 +3,7 @@ namespace Bot;
 
 use Config\AppConfig;
 use Payment\ZarinpalPaymentHandler;
+use Bot\delete;
 
 require_once __DIR__ . "/jdf.php";
 
@@ -509,6 +510,7 @@ class BotHandler
             $deleteAt  = date('Y-m-d H:i:s', time() + (15));
             $this->db->logScheduledDelete($goal['id'], $this->chatId, $messageId, $deleteAt);
            
+            new delete($this->chatId , $messageId);
             
         }
     }
