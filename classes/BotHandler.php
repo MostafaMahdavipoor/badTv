@@ -344,6 +344,11 @@ class BotHandler
                 $page = (int) substr($callbackData, strlen('list_goals_page_'));
                 $this->showGoalsList($page, $messageId);
                 break;
+            case (str_starts_with($callbackData, 'back_list_goals_page_')):
+                $this->deleteMessageWithDelay();
+                $page = (int) substr($callbackData, strlen('list_goals_page_'));
+                $this->showGoalsList($page);
+                break;
         }
 
         if (preg_match('/^show_goal_details_(\d+)_(\d+)$/', $callbackData, $matches)) {
@@ -973,7 +978,7 @@ class BotHandler
 
         $this->answerCallbackQuery($this->callbackQueryId);
 
-        $backToListButton = ['text' => '⬅️ بازگشت به لیست', 'callback_data' => 'list_goals_page_' . $page];
+        $backToListButton = ['text' => '⬅️ بازگشت به لیست', 'callback_data' => 'back_list_goals_page_' . $page];
 
         $method = 'send' . ucfirst($goal['type']);
         $params = [
