@@ -56,16 +56,13 @@ while (true) {
             continue; // برو به ابتدای حلقه
         }
 
-        echo "Found " . count($messagesToDelete) . " messages to delete. Starting process...\n";
-
+       
         $workCycleStartTime = microtime(true);
 
         foreach ($messagesToDelete as $message) {
             $elapsedWorkTime = microtime(true) - $workCycleStartTime;
-            if ($elapsedWorkTime >= $workDuration) {
-                echo "--> Work cycle finished. Resting for {$restDuration} seconds...\n";
+            if ($elapsedWorkTime >= $workDuration) {          
                 sleep($restDuration);
-                echo "--> Rest complete. Resuming...\n";
                 $workCycleStartTime = microtime(true);
             }
             
@@ -75,13 +72,8 @@ while (true) {
             $chatId = $message['chat_id'];
             $messageId = $message['message_id'];
 
-            echo "Processing message #{$messageId} for chat #{$chatId}...\n";
-
-            // ارسال درخواست حذف به تلگرام
             if (sendTelegramRequest($botToken, 'deleteMessage', ['chat_id' => $chatId, 'message_id' => $messageId])) {
-                // فقط در صورت موفقیت‌آمیز بودن حذف، لاگ را از دیتابیس پاک کن
                 $db->removeDeletionLog($logId);
-                echo " -> Success. Log entry #{$logId} removed.\n";
             } else {
                 echo " -> Failed to delete message #{$messageId}. Log will be kept for retry.\n";
             }
@@ -95,9 +87,6 @@ while (true) {
                 usleep($sleepDuration * 1000000);
             }
         }
-
-        echo "Batch finished. Looking for new tasks...\n";
-
     } catch (Throwable $e) {
         // در صورت بروز هرگونه خطا (مثلا قطعی دیتابیس)، خطا را نمایش بده و ۱۰ ثانیه صبر کن
         echo "❌ An error occurred: " . $e->getMessage() . "\n";
