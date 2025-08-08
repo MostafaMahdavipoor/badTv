@@ -1,9 +1,9 @@
 <?php
 namespace Bot;
 
+use Bot\delete;
 use Config\AppConfig;
 use Payment\ZarinpalPaymentHandler;
-use Bot\delete;
 
 require_once __DIR__ . "/jdf.php";
 
@@ -345,21 +345,22 @@ class BotHandler
                 $this->showGoalsList($page, $messageId);
                 break;
 
-            case (str_starts_with($callbackData, 'show_goal_details_')):
-                $goalId = (int) substr($callbackData, strlen('show_goal_details_'));
-                $this->showGoalDetails($goalId, $messageId);
+            case (preg_match('/^show_goal_details_(\d+)_(\d+)$/', $callbackData, $matches)):
+                $goalId = (int) $matches[1];
+                $page   = (int) $matches[2];
+                $this->showGoalDetails($goalId, $messageId, $page);
                 break;
 
-            case 'delete_message':
-                $this->deleteMessageWithDelay();
-                break;
-            case (str_starts_with($callbackData, 'delete_goal_')):
-                $goalId  = (int) substr($callbackData, strlen('delete_goal_'));
+            case (preg_match('/^delete_goal_(\d+)_(\d+)$/', $callbackData, $matches)):
+                $goalId  = (int) $matches[1];
+                $page    = (int) $matches[2];
                 $deleted = $this->db->deleteGoalById($goalId);
+
                 if ($deleted) {
                     $this->answerCallbackQuery($this->callbackQueryId, "✅ گل با موفقیت حذف شد.", false);
-                    $this->sendRequest('deleteMessage', ['chat_id' => $chatId, 'message_id' => $messageId]);
-                    $this->showGoalsList(1);
+                    // حذف پیام جزئیات و بازگشت به لیست
+                    $this->deleteMessageWithDelay($messageId);
+                    $this->showGoalsList($page, null); // ارسال پیام جدید لیست
                 } else {
                     $this->answerCallbackQuery($this->callbackQueryId, "❌ خطا در حذف گل!", true);
                 }
@@ -509,9 +510,9 @@ class BotHandler
             $messageId = $response['result']['message_id'];
             $deleteAt  = date('Y-m-d H:i:s', time() + (15));
             $this->db->logScheduledDelete($goal['id'], $this->chatId, $messageId, $deleteAt);
-           
-            new delete($this->chatId , $messageId);
-            
+
+            new delete($this->chatId, $messageId);
+
         }
     }
 
@@ -901,12 +902,15 @@ class BotHandler
     }
     private function showGoalsList(int $page = 1, ?int $messageId = null): void
     {
+        // این متد برای ویرایش پیام موجود یا ارسال پیام جدید استفاده می‌شود
+        $isEdit = $messageId !== null;
+
         $perPage    = 16;
         $goals      = $this->db->getGoalsPaginated($page, $perPage);
         $totalGoals = $this->db->getGoalsCount();
         $totalPages = ceil($totalGoals / $perPage);
 
-        $text = "📋 *لیست گل‌ها (صفحه {$page} از {$totalPages})*\n\n";
+        $text = "📋 <b>لیست گل‌ها (صفحه {$page} از {$totalPages})</b>\n\n";
         $text .= "برای مشاهده جزئیات و حذف، روی هر گل کلیک کنید:";
 
         if (empty($goals)) {
@@ -916,27 +920,23 @@ class BotHandler
         $inlineKeyboard = [];
         $row            = [];
         foreach ($goals as $goal) {
-            // یک نام نمایشی برای دکمه ایجاد می‌کنیم
             $buttonText = "گل #" . $goal['id'];
             if (! empty($goal['caption'])) {
-                // نمایش 20 کاراکتر اول کپشن
                 $buttonText = mb_substr($goal['caption'], 0, 20) . '...';
             }
 
-            $row[] = ['text' => $buttonText, 'callback_data' => 'show_goal_details_' . $goal['id']];
+            // *** تغییر کلیدی اول: اضافه کردن شماره صفحه به callback_data ***
+            $row[] = ['text' => $buttonText, 'callback_data' => 'show_goal_details_' . $goal['id'] . '_' . $page];
 
-            // اگر ردیف دو ستونه شد، آن را به کیبورد اضافه کن و ردیف جدید بساز
             if (count($row) == 2) {
                 $inlineKeyboard[] = $row;
                 $row              = [];
             }
         }
-        // اگر تعداد آیتم‌ها فرد بود، آخرین ردیف تک ستونه را اضافه کن
         if (! empty($row)) {
             $inlineKeyboard[] = $row;
         }
 
-        // ساخت دکمه‌های صفحه‌بندی (بعدی و قبلی)
         $paginationButtons = [];
         if ($page > 1) {
             $paginationButtons[] = ['text' => '◀️ قبلی', 'callback_data' => 'list_goals_page_' . ($page - 1)];
@@ -953,43 +953,44 @@ class BotHandler
         $data = [
             'chat_id'      => $this->chatId,
             'text'         => $text,
-            'parse_mode'   => 'Markdown',
+            'parse_mode'   => 'HTML',
             'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
         ];
 
-        // اگر messageId وجود داشت، پیام را ویرایش کن، در غیر این صورت پیام جدید بفرست
-        if ($messageId) {
+        if ($isEdit) {
             $data['message_id'] = $messageId;
             $this->sendRequest('editMessageText', $data);
         } else {
-            // اگر از ابتدا لیست را باز می‌کنیم، پیام قبلی را حذف و پیام جدید ارسال می‌کنیم
-            $this->sendRequest('deleteMessage', ['chat_id' => $this->chatId, 'message_id' => $this->messageId]);
             $this->sendRequest('sendMessage', $data);
         }
     }
-
-    private function showGoalDetails(int $goalId, int $messageId): void
+    private function showGoalDetails(int $goalId, int $originalMessageId, int $page): void
     {
+        $this->deleteMessageWithDelay($originalMessageId);
+
         $goal = $this->db->getGoalById($goalId);
         if (! $goal) {
             $this->answerCallbackQuery($this->callbackQueryId, "❌ گل مورد نظر یافت نشد!", true);
+            $this->showGoalsList($page, null);
             return;
         }
 
         $this->answerCallbackQuery($this->callbackQueryId);
 
+        $backToListButton = ['text' => '⬅️ بازگشت به لیست', 'callback_data' => 'list_goals_page_' . $page];
+
         $method = 'send' . ucfirst($goal['type']);
         $params = [
             'chat_id'      => $this->chatId,
             'caption'      => $goal['caption'] . "\n\n" . "آیا مایل به حذف این گل هستید؟",
-            $goal['type']  => $goal['file_id'], // 'video' => file_id, 'photo' => file_id, etc.
+            $goal['type']  => $goal['file_id'],
             'reply_markup' => json_encode([
                 'inline_keyboard' => [
                     [
-                        ['text' => '❌ حذف گل', 'callback_data' => 'delete_goal_' . $goalId],
+                        ['text' => '❌ حذف گل', 'callback_data' => 'delete_goal_' . $goalId . '_' . $page],
                     ],
                     [
-                        ['text' => '⬅️ بازگشت به لیست', 'callback_data' => 'delete_message'],
+                        $backToListButton,
                     ],
                 ],
             ]),
