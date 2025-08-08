@@ -32,11 +32,11 @@ class BotHandler
         $this->botLink                = $config['bot']['bot_link'];
         $this->zarinpalPaymentHandler = new ZarinpalPaymentHandler();
     }
-    public function deleteMessageWithDelay(): void
+    public function deleteMessageWithDelay($messageId = null): void
     {
         $this->sendRequest("deleteMessage", [
             "chat_id"    => $this->chatId,
-            "message_id" => $this->messageId,
+            "message_id" => $messageId ?: $this->messageId,
         ]);
     }
     public function handleSuccessfulPayment($update): void
@@ -508,6 +508,8 @@ class BotHandler
             $messageId = $response['result']['message_id'];
             $deleteAt  = date('Y-m-d H:i:s', time() + (20));
             $this->db->logScheduledDelete($goal['id'], $this->chatId, $messageId, $deleteAt);
+            sleep(20);
+            $this->deleteMessageWithDelay($messageId);
         }
     }
 
