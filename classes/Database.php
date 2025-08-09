@@ -482,4 +482,16 @@ class Database
         }
         return $stats;
     }
+
+      public function saveChannelMessageIds(int $goalId, array $messageIds): bool
+    {
+        $sql = "UPDATE goals SET channel_message_ids = ? WHERE id = ?";
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            return $stmt->execute([json_encode($messageIds), $goalId]);
+        } catch (PDOException $e) {
+            error_log("❌ Failed to save channel message IDs for goal {$goalId}: " . $e->getMessage());
+            return false;
+        }
+    }
 }

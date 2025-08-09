@@ -283,8 +283,10 @@ class BotHandler
                 }
                 break;
 
+       
+
             case (str_starts_with($callbackData, 'send_goal_')):
-                $goalId    = substr($callbackData, strlen('send_goal_'));
+                $goalId    = (int) substr($callbackData, strlen('send_goal_'));
                 $stateData = $this->fileHandler->getUser($chatId) ?? null;
 
                 if ($stateData && $stateData['state'] === 'selecting_channels' && $stateData['goal_id'] == $goalId) {
@@ -295,18 +297,42 @@ class BotHandler
                         break;
                     }
 
-                    $goal = $this->db->getGoalById((int) $goalId);
+                    $goal = $this->db->getGoalById($goalId);
 
                     if ($goal) {
-                        $caption    = $goal['caption'];
+                        $channelMessageIds = []; 
                         $viewButton = [[['text' => '👁 مشاهده گل', 'url' => "{$this->botLink}goal_{$goal['token']}"]]];
+                        $method = '';
+                        switch ($goal['type']) {
+                            case 'video':     $method = 'sendVideo';     break;
+                            case 'animation': $method = 'sendAnimation'; break;
+                            case 'photo':     $method = 'sendPhoto';     break;
+                            case 'document':  $method = 'sendDocument';  break;
+                            default:
+                                error_log("Invalid goal type for sending: " . $goal['type']);
+                                $this->answerCallbackQuery($this->callbackQueryId, "خطا: نوع فایل نامعتبر است!", true);
+                                break 2; 
+                        }
+                        
                         foreach ($selectedChannels as $channelName) {
-                            $this->sendRequest('sendMessage', [
+                            $params = [
                                 'chat_id'      => $channelName,
-                                'text'         => $caption,
+                                'caption'      => $goal['caption'],
                                 'parse_mode'   => 'HTML',
                                 'reply_markup' => json_encode(['inline_keyboard' => $viewButton]),
-                            ]);
+                            ];
+                            $params[$goal['type']] = $goal['file_id'];
+                            $response = $this->sendRequest($method, $params);
+                            
+                            if ($response && $response['ok']) {
+                                $channelMessageIds[$channelName] = $response['result']['message_id'];
+                            } else {
+                                error_log("Failed to send goal {$goalId} to channel {$channelName}");
+                            }
+                        }
+                        
+                        if (!empty($channelMessageIds)) {
+                            $this->db->saveChannelMessageIds($goalId, $channelMessageIds);
                         }
 
                         $this->sendRequest('editMessageText', [
@@ -357,15 +383,37 @@ class BotHandler
             $this->showGoalDetails($goalId, $messageId, $page);
 
         } elseif (preg_match('/^delete_goal_(\d+)_(\d+)$/', $callbackData, $matches)) {
-            $goalId  = (int) $matches[1];
-            $page    = (int) $matches[2];
+            $goalId = (int) $matches[1];
+            $page   = (int) $matches[2];
+
+            $goal = $this->db->getGoalById($goalId);
+
+            if (!$goal) {
+                $this->answerCallbackQuery($this->callbackQueryId, "❌ گل یافت نشد یا قبلاً حذف شده است.", true);
+                return; 
+            }
+
+            if (!empty($goal['channel_message_ids'])) {
+                $messageIdsByChannel = json_decode($goal['channel_message_ids'], true);
+
+                if (is_array($messageIdsByChannel)) {
+                    foreach ($messageIdsByChannel as $channelId => $messageIdToDelete) {
+                        $this->sendRequest("deleteMessage", [
+                            "chat_id"    => $channelId,
+                            "message_id" => $messageIdToDelete,
+                        ]);
+                     
+                    }
+                }
+            }
             $deleted = $this->db->deleteGoalById($goalId);
+
             if ($deleted) {
-                $this->answerCallbackQuery($this->callbackQueryId, "✅ گل با موفقیت حذف شد.", false);
+                $this->answerCallbackQuery($this->callbackQueryId, "✅ گل با موفقیت از دیتابیس و کانال‌ها حذف شد.", false);
                 $this->deleteMessageWithDelay($messageId);
                 $this->showGoalsList($page, null);
             } else {
-                $this->answerCallbackQuery($this->callbackQueryId, "❌ خطا در حذف گل!", true);
+                $this->answerCallbackQuery($this->callbackQueryId, "❌ خطا در حذف گل از دیتابیس!", true);
             }
         }
 
