@@ -307,6 +307,7 @@ class BotHandler
                     $goal = $this->db->getGoalById($goalId);
 
                     if ($goal) {
+                        
                         $channelMessageIds = [];
                         $config = AppConfig::getConfig();
                         $miniAppUrl = $config['bot']['mini_app_url'];
