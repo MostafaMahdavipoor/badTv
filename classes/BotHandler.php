@@ -308,7 +308,10 @@ class BotHandler
 
                     if ($goal) {
                         $channelMessageIds = [];
-                        $viewButton = [[['text' => '👁 مشاهده گل', 'url' => "{$this->botLink}goal_{$goal['token']}"]]];
+                        $config = AppConfig::getConfig();
+                        $miniAppUrl = $config['bot']['mini_app_url'];
+                        $miniAppGoalUrl = $miniAppUrl . 'index.html?goal_token=' . $goal['token'];
+                        $viewButton = [[['text' => '👁 مشاهده گل', 'web_app' => ['url' => $miniAppGoalUrl]]]];
                         $method = '';
                         switch ($goal['type']) {
                             case 'video':
