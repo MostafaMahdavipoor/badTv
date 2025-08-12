@@ -1,0 +1,5 @@
+[08-Aug-2025 19:18:41 UTC] PHP Fatal error:  Uncaught TypeError: Cannot access offset of type string on string in /home1/rammehr1/public_html/Rambot/test/Amir/test/badTv/cronjobs/get_goal.php:31
+Stack trace:
+#0 {main}
+  thrown in /home1/rammehr1/public_html/Rambot/test/Amir/test/badTv/cronjobs/get_goal.php on line 31
+[08-Aug-2025 19:38:55 UTC] PHP Parse error:  syntax error, unexpected token "===", expecting end of file in /home1/rammehr1/public_html/Rambot/test/Amir/test/badTv/cronjobs/get_goal.php on line 35
