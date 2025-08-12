@@ -292,6 +292,85 @@ class BotHandler
 
 
 
+            // case (str_starts_with($callbackData, 'send_goal_')):
+            //     $goalId    = (int) substr($callbackData, strlen('send_goal_'));
+            //     $stateData = $this->fileHandler->getUser($chatId) ?? null;
+
+            //     if ($stateData && $stateData['state'] === 'selecting_channels' && $stateData['goal_id'] == $goalId) {
+            //         $selectedChannels = $stateData['selected_channels'];
+
+            //         if (empty($selectedChannels)) {
+            //             $this->answerCallbackQuery($this->callbackQueryId, "هیچ کانالی انتخاب نشده است!", true);
+            //             break;
+            //         }
+
+            //         $goal = $this->db->getGoalById($goalId);
+
+            //         if ($goal) {
+            //             $channelMessageIds = [];
+            //             $config = AppConfig::getConfig();
+            //             $miniAppUrl = $config['bot']['mini_app_url'];
+            //             $miniAppGoalUrl = $miniAppUrl . 'index.html?goal_token=' . $goal['token'];
+            //             $viewButton = [[['text' => '👁 مشاهده گل', 'web_app' => ['url' => $miniAppGoalUrl]]]];
+                       
+            //             $method = '';
+            //             switch ($goal['type']) {
+            //                 case 'video':
+            //                     $method = 'sendVideo';
+            //                     break;
+            //                 case 'animation':
+            //                     $method = 'sendAnimation';
+            //                     break;
+            //                 case 'photo':
+            //                     $method = 'sendPhoto';
+            //                     break;
+            //                 case 'document':
+            //                     $method = 'sendDocument';
+            //                     break;
+            //                 default:
+            //                     error_log("Invalid goal type for sending: " . $goal['type']);
+            //                     $this->answerCallbackQuery($this->callbackQueryId, "خطا: نوع فایل نامعتبر است!", true);
+            //                     break 2;
+            //             }
+
+            //             foreach ($selectedChannels as $channelName) {
+            //                 $params = [
+            //                     'chat_id'      => $channelName,
+            //                     'caption'      => $goal['caption'],
+            //                     'parse_mode'   => 'HTML',
+            //                     'reply_markup' => json_encode(['inline_keyboard' => $viewButton]),
+            //                 ];
+            //                 $params[$goal['type']] = $goal['file_id'];
+            //                 $response = $this->sendRequest($method, $params);
+
+            //                 if ($response && $response['ok']) {
+            //                     $channelMessageIds[$channelName] = $response['result']['message_id'];
+            //                 } else {
+            //                     error_log("Failed to send goal {$goalId} to channel {$channelName}");
+            //                 }
+            //             }
+
+            //             if (!empty($channelMessageIds)) {
+            //                 $this->db->saveChannelMessageIds($goalId, $channelMessageIds);
+            //             }
+
+            //             $this->sendRequest('editMessageText', [
+            //                 'chat_id'      => $chatId,
+            //                 'message_id'   => $messageId,
+            //                 'text'         => '✅ پیام با موفقیت به ' . count($selectedChannels) . ' کانال ارسال شد.',
+            //                 'reply_markup' => json_encode([
+            //                     'inline_keyboard' => [
+            //                         [
+            //                             ['text' => '⬅️ بازگشت به پنل ادمین', 'callback_data' => 'admin_panel'],
+            //                         ],
+            //                     ],
+            //                 ]),
+            //             ]);
+            //             $this->fileHandler->clearUser($chatId);
+            //         }
+            //     }
+            //     break;
+            
             case (str_starts_with($callbackData, 'send_goal_')):
                 $goalId    = (int) substr($callbackData, strlen('send_goal_'));
                 $stateData = $this->fileHandler->getUser($chatId) ?? null;
@@ -312,41 +391,29 @@ class BotHandler
                         $config = AppConfig::getConfig();
                         $miniAppUrl = $config['bot']['mini_app_url'];
                         $miniAppGoalUrl = $miniAppUrl . 'index.html?goal_token=' . $goal['token'];
-                        $viewButton = [[['text' => '👁 مشاهده گل', 'web_app' => ['url' => $miniAppGoalUrl]]]];
-                        $method = '';
-                        switch ($goal['type']) {
-                            case 'video':
-                                $method = 'sendVideo';
-                                break;
-                            case 'animation':
-                                $method = 'sendAnimation';
-                                break;
-                            case 'photo':
-                                $method = 'sendPhoto';
-                                break;
-                            case 'document':
-                                $method = 'sendDocument';
-                                break;
-                            default:
-                                error_log("Invalid goal type for sending: " . $goal['type']);
-                                $this->answerCallbackQuery($this->callbackQueryId, "خطا: نوع فایل نامعتبر است!", true);
-                                break 2;
-                        }
+                        
+                        // [!] اصلاح ساختار دکمه برای جلوگیری از خطای BUTTON_TYPE_INVALID
+                       // $viewButton = [[['text' => '👁 مشاهده گل', 'web_app' => ['url' => $miniAppGoalUrl]]]];
 
+                        // [!] حذف کامل switch و متدهای ارسال فایل
+                        
                         foreach ($selectedChannels as $channelName) {
+                            // [!] استفاده از sendMessage برای ارسال فقط متن (کپشن)
                             $params = [
                                 'chat_id'      => $channelName,
-                                'caption'      => $goal['caption'],
+                                'text'         => $goal['caption']."\n".$miniAppGoalUrl, // استفاده از 'text' به جای 'caption'
                                 'parse_mode'   => 'HTML',
-                                'reply_markup' => json_encode(['inline_keyboard' => $viewButton]),
+                            //    'reply_markup' => json_encode(['inline_keyboard' => $viewButton]),
                             ];
-                            $params[$goal['type']] = $goal['file_id'];
-                            $response = $this->sendRequest($method, $params);
+                            
+                            // [!] دیگر فایل مدیا ارسال نمی‌شود
+                            $response = $this->sendRequest('sendMessage', $params);
 
                             if ($response && $response['ok']) {
                                 $channelMessageIds[$channelName] = $response['result']['message_id'];
                             } else {
-                                error_log("Failed to send goal {$goalId} to channel {$channelName}");
+                                $errorDescription = $response['description'] ?? 'Unknown Error';
+                                error_log("Failed to send goal caption {$goalId} to channel {$channelName}. Reason: {$errorDescription}");
                             }
                         }
 

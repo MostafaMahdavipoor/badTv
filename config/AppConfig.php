@@ -35,7 +35,7 @@ class AppConfig
                     'token' => $_ENV['BOT_TOKEN'] ?? $_SERVER['BOT_TOKEN'],
                     'merchant_id' => '',
                     'bot_link' => $_ENV['BOT_LINK'],
-                    'mini_app_url' => 'https://futballbadgoal.ir/badTv/mini_app/'
+                    'mini_app_url' => 'https://futballbadgoal.ir/badTvMiniApp/mini_app/'
                 ],
                 'ai' => [
                     'gpt' => [

@@ -56,40 +56,46 @@
     </div>
 
     <script>
-        
-        const API_BASE_URL = "https://futballbadgoal.ir/badTv/api/";
+    const API_BASE_URL = "https://futballbadgoal.ir/badTvMiniApp/api/";
 
-        document.addEventListener("DOMContentLoaded", function() {
-            let tg = window.Telegram.WebApp;
+    document.addEventListener("DOMContentLoaded", function() {
+        // --- بخش اصلاح شده ---
+        // ابتدا بررسی می‌کنیم که آیا در محیط تلگرام هستیم یا نه
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+            const tg = window.Telegram.WebApp;
             tg.ready();     
             tg.expand();    
-            const urlParams = new URLSearchParams(window.location.search);
-            const goalToken = urlParams.get('goal_token');
+        }
+        // --- پایان بخش اصلاح شده ---
 
-            if (!goalToken) {
-                showError("خطا: اطلاعات مورد نیاز برای نمایش گل یافت نشد.");
-                return;
-            }
+        // این بخش از کد در هر صورت اجرا می‌شود چون به تلگرام وابسته نیست
+        const urlParams = new URLSearchParams(window.location.search);
+        const goalToken = urlParams.get('goal_token');
 
-            fetch(API_BASE_URL + `getGoal.php?token=${goalToken}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`خطای سرور: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.ok) {
-                        displayGoal(data.result);
-                    } else {
-                        showError("خطا: " + data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching goal:', error);
-                    showError("خطا در برقراری ارتباط برای دریافت اطلاعات.");
-                });
-        });
+        if (!goalToken) {
+            showError("خطا: اطلاعات مورد نیاز برای نمایش گل یافت نشد.");
+            return;
+        }
+
+        fetch(API_BASE_URL + `getGoal.php?token=${goalToken}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`خطای سرور: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.ok) {
+                    displayGoal(data.result);
+                } else {
+                    showError("خطا: " + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching goal:', error);
+                showError("خطا در برقراری ارتباط برای دریافت اطلاعات.");
+            });
+    });
 
         function displayGoal(goal) {
             const mediaContainer = document.getElementById("media-container");
