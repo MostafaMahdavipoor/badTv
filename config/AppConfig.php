@@ -22,6 +22,9 @@ class AppConfig
             $dotenv->safeLoad();
 
             self::$config = [
+                'app' => [
+                    'base_url' => 'https://futballbadgoal.ir/'
+                ],
                 'database' => [
                     'host' => $_ENV['DB_HOST'] ?? $_SERVER['DB_HOST'] ?? 'localhost',
                     'username' => $_ENV['DB_USERNAME'] ?? $_SERVER['DB_USERNAME'] ?? '',
@@ -32,6 +35,7 @@ class AppConfig
                     'token' => $_ENV['BOT_TOKEN'] ?? $_SERVER['BOT_TOKEN'],
                     'merchant_id' => '',
                     'bot_link' => $_ENV['BOT_LINK'],
+                    'mini_app_url' => 'https://futballbadgoal.ir/badTv/mini_app/'
                 ],
                 'ai' => [
                     'gpt' => [
@@ -51,7 +55,6 @@ class AppConfig
                     ]
                 ]
             ];
-
         } catch (InvalidPathException $e) {
             error_log("⚠️ Warning: .env file not found in project root.");
         }

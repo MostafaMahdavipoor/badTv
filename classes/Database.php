@@ -1,4 +1,5 @@
 <?php
+
 namespace Bot;
 
 use Config\AppConfig;
@@ -86,14 +87,31 @@ class Database
         $stmt->execute([$goalId]);
         return $stmt->fetch();
     }
-    public function saveGoal(int $chatId, string $fileId, string $type, ?string $caption): ?int
-    {
-        $sql   = "INSERT INTO goals (chat_id, file_id, type, caption, token) VALUES (?, ?, ?, ?, ?)";
-        $token = $this->generateUniqueToken(4);
+    // public function saveGoal(int $chatId, string $fileId, string $type, ?string $caption): ?int
+    // {
+    //     $sql   = "INSERT INTO goals (chat_id, file_id, type, caption, token) VALUES (?, ?, ?, ?, ?)";
+    //     $token = $this->generateUniqueToken(4);
 
+    //     try {
+    //         $stmt = $this->pdo->prepare($sql);
+    //         $stmt->execute([$chatId, $fileId, $type, $caption, $token]);
+    //         return (int) $this->pdo->lastInsertId();
+    //     } catch (PDOException $e) {
+    //         error_log("❌ Failed to save goal: " . $e->getMessage());
+    //         return null;
+    //     }
+    // }
+
+
+
+    public function saveGoal(int $chatId, string $fileId, string $type, ?string $caption, string $publicUrl): ?int
+    {
+        $token = $this->generateUniqueToken(4);
+        $sql = "INSERT INTO goals (chat_id, file_id, type, caption, token, video_url) VALUES (?, ?, ?, ?, ?, ?)";
         try {
             $stmt = $this->pdo->prepare($sql);
-            $stmt->execute([$chatId, $fileId, $type, $caption, $token]);
+
+            $stmt->execute([$chatId, $fileId, $type, $caption, $token, $publicUrl]);
             return (int) $this->pdo->lastInsertId();
         } catch (PDOException $e) {
             error_log("❌ Failed to save goal: " . $e->getMessage());
@@ -483,7 +501,7 @@ class Database
         return $stats;
     }
 
-      public function saveChannelMessageIds(int $goalId, array $messageIds): bool
+    public function saveChannelMessageIds(int $goalId, array $messageIds): bool
     {
         $sql = "UPDATE goals SET channel_message_ids = ? WHERE id = ?";
         try {

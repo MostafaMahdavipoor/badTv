@@ -1,4 +1,5 @@
 <?php
+
 namespace Bot;
 
 use Bot\delete;
@@ -229,7 +230,7 @@ class BotHandler
             case 'confirm_caption':
                 $stateData = $this->fileHandler->getUser($chatId);
                 if (isset($stateData['state']) && $stateData['state'] === 'awaiting_caption_confirmation') {
-                    $goalId = $this->db->saveGoal($chatId, $stateData['file_id'], $stateData['type'], $stateData['caption']);
+                    $goalId = $this->db->saveGoal($chatId, $stateData['file_id'], $stateData['type'], $stateData['caption'], $stateData['public_url']);
 
                     if ($goalId) {
                         $this->showChannelSelectionMenu($chatId, $messageId, $goalId);
@@ -240,11 +241,17 @@ class BotHandler
             case 'change_caption':
                 $stateData = $this->fileHandler->getUser($chatId);
                 if (isset($stateData['state']) && $stateData['state'] === 'awaiting_caption_confirmation') {
-                    $newState       = ['state' => 'awaiting_new_caption', 'file_id' => $stateData['file_id'], 'type' => $stateData['type']];
+                    $newState = [
+                        'state' => 'awaiting_new_caption',
+                        'file_id' => $stateData['file_id'],
+                        'type' => $stateData['type'],
+                        'public_url' => $stateData['public_url']
+                    ];
                     $cancelKeyboard = [[['text' => '❌ لغو', 'callback_data' => 'admin_panel']]];
                     $this->fileHandler->saveUser($chatId, $newState);
                     $res = $this->sendRequest('editMessageText', [
-                        'chat_id'      => $chatId, 'message_id' => $messageId,
+                        'chat_id'      => $chatId,
+                        'message_id' => $messageId,
                         'text'         => 'لطفاً کپشن جدید را ارسال کنید.',
                         'reply_markup' => json_encode(['inline_keyboard' => $cancelKeyboard]),
 
@@ -283,7 +290,7 @@ class BotHandler
                 }
                 break;
 
-       
+
 
             case (str_starts_with($callbackData, 'send_goal_')):
                 $goalId    = (int) substr($callbackData, strlen('send_goal_'));
@@ -300,20 +307,28 @@ class BotHandler
                     $goal = $this->db->getGoalById($goalId);
 
                     if ($goal) {
-                        $channelMessageIds = []; 
+                        $channelMessageIds = [];
                         $viewButton = [[['text' => '👁 مشاهده گل', 'url' => "{$this->botLink}goal_{$goal['token']}"]]];
                         $method = '';
                         switch ($goal['type']) {
-                            case 'video':     $method = 'sendVideo';     break;
-                            case 'animation': $method = 'sendAnimation'; break;
-                            case 'photo':     $method = 'sendPhoto';     break;
-                            case 'document':  $method = 'sendDocument';  break;
+                            case 'video':
+                                $method = 'sendVideo';
+                                break;
+                            case 'animation':
+                                $method = 'sendAnimation';
+                                break;
+                            case 'photo':
+                                $method = 'sendPhoto';
+                                break;
+                            case 'document':
+                                $method = 'sendDocument';
+                                break;
                             default:
                                 error_log("Invalid goal type for sending: " . $goal['type']);
                                 $this->answerCallbackQuery($this->callbackQueryId, "خطا: نوع فایل نامعتبر است!", true);
-                                break 2; 
+                                break 2;
                         }
-                        
+
                         foreach ($selectedChannels as $channelName) {
                             $params = [
                                 'chat_id'      => $channelName,
@@ -323,14 +338,14 @@ class BotHandler
                             ];
                             $params[$goal['type']] = $goal['file_id'];
                             $response = $this->sendRequest($method, $params);
-                            
+
                             if ($response && $response['ok']) {
                                 $channelMessageIds[$channelName] = $response['result']['message_id'];
                             } else {
                                 error_log("Failed to send goal {$goalId} to channel {$channelName}");
                             }
                         }
-                        
+
                         if (!empty($channelMessageIds)) {
                             $this->db->saveChannelMessageIds($goalId, $channelMessageIds);
                         }
@@ -381,7 +396,6 @@ class BotHandler
             $goalId = (int) $matches[1];
             $page   = (int) $matches[2];
             $this->showGoalDetails($goalId, $messageId, $page);
-
         } elseif (preg_match('/^delete_goal_(\d+)_(\d+)$/', $callbackData, $matches)) {
             $goalId = (int) $matches[1];
             $page   = (int) $matches[2];
@@ -390,7 +404,7 @@ class BotHandler
 
             if (!$goal) {
                 $this->answerCallbackQuery($this->callbackQueryId, "❌ گل یافت نشد یا قبلاً حذف شده است.", true);
-                return; 
+                return;
             }
 
             if (!empty($goal['channel_message_ids'])) {
@@ -402,7 +416,6 @@ class BotHandler
                             "chat_id"    => $channelId,
                             "message_id" => $messageIdToDelete,
                         ]);
-                     
                     }
                 }
             }
@@ -416,12 +429,8 @@ class BotHandler
                 $this->answerCallbackQuery($this->callbackQueryId, "❌ خطا در حذف گل از دیتابیس!", true);
             }
         }
-
     }
-    public function handleInlineQuery(): void
-    {
-
-    }
+    public function handleInlineQuery(): void {}
     public function handleRequest(): void
     {
 
@@ -472,6 +481,7 @@ class BotHandler
             $this->processNewCaption($this->message);
         }
     }
+
     private function processNewCaption(array $message): void
     {
         $chatId     = $message['chat']['id'];
@@ -480,8 +490,7 @@ class BotHandler
         $stateData = $this->fileHandler->getUser($chatId);
 
         if (isset($stateData['state']) && $stateData['state'] === 'awaiting_new_caption') {
-            $goalId = $this->db->saveGoal($chatId, $stateData['file_id'], $stateData['type'], $newCaption);
-
+            $goalId = $this->db->saveGoal($chatId, $stateData['file_id'], $stateData['type'], $newCaption, $stateData['public_url']);
             if ($goalId) {
                 $messageIdToEdit = $this->fileHandler->getMessageId($chatId);
                 $this->showChannelSelectionMenu($chatId, $messageIdToEdit, $goalId);
@@ -520,7 +529,8 @@ class BotHandler
     {
         $this->sendRequest("sendMessage", [
             "chat_id" => $this->chatId,
-          "text" => "✅ گل برای شما ارسال شد. این یک پیام موقتی است و در 15 ثانیه حذف می‌شود.\n\nبرای ذخیره دائمی، لطفاً آن را به saveMessage فوروارد کنید.",   ]);
+            "text" => "✅ گل برای شما ارسال شد. این یک پیام موقتی است و در 15 ثانیه حذف می‌شود.\n\nبرای ذخیره دائمی، لطفاً آن را به saveMessage فوروارد کنید.",
+        ]);
         $method  = '';
         $chatId  = $this->chatId;
         $fileId  = $goal['file_id'];
@@ -560,7 +570,6 @@ class BotHandler
             $this->db->logScheduledDelete($goal['id'], $this->chatId, $messageId, $deleteAt);
 
             new delete($this->chatId, $messageId);
-
         }
     }
 
@@ -639,7 +648,6 @@ class BotHandler
 
     private function processGoalUpload(array $message): void
     {
-
         $chatId          = $message['chat']['id'];
         $fileId          = null;
         $fileType        = null;
@@ -660,19 +668,25 @@ class BotHandler
             $fileType = 'document';
         }
         if ($fileId === null) {
-            $this->sendRequest('sendMessage', ['chat_id' => $chatId, 'text' => '❌ لطفاً فقط ویدیو یا گیف ارسال کنید.']);
+            $this->sendRequest('sendMessage', ['chat_id' => $chatId, 'text' => '❌ لطفاً فقط ویدیو، عکس یا گیف ارسال کنید.']);
+            return;
+        }
+
+        $publicFileUrl = $this->downloadFileFromTelegram($fileId, $fileType);
+        if ($publicFileUrl === null) {
+            $this->sendRequest('sendMessage', ['chat_id' => $chatId, 'text' => '❌ خطایی در پردازش و ذخیره فایل رخ داد. لطفاً دوباره تلاش کنید.']);
             return;
         }
 
         $messageIdToEdit = $this->fileHandler->getMessageId($chatId);
 
         if ($existingCaption !== null) {
-
             $newState = [
                 'state'   => 'awaiting_caption_confirmation',
                 'file_id' => $fileId,
                 'type'    => $fileType,
                 'caption' => $existingCaption,
+                'public_url' => $publicFileUrl,
             ];
             $this->fileHandler->saveUser($chatId, $newState);
 
@@ -690,13 +704,15 @@ class BotHandler
                 'reply_markup' => json_encode(['inline_keyboard' => $confirmKeyboard]),
             ]);
         } else {
-
             $newState = [
                 'state'   => 'awaiting_new_caption',
-                'file_id' => $fileId, 'type' => $fileType];
+                'file_id' => $fileId,
+                'type' => $fileType,
+                'public_url' => $publicFileUrl,
+            ];
             $this->fileHandler->saveUser($chatId, $newState);
 
-            $promptText = "✅ فایل دریافت شد. اکنون کپشن مورد نظر خود را برای آن ارسال کنید.";
+            $promptText = "✅ فایل دریافت و با موفقیت ذخیره شد. اکنون کپشن مورد نظر خود را برای آن ارسال کنید.";
             $res        = $this->sendRequest('editMessageText', [
                 'chat_id'    => $chatId,
                 'message_id' => $messageIdToEdit,
@@ -742,7 +758,7 @@ class BotHandler
             $this->sendRequest('sendMessage', [
                 'chat_id' => $chatId,
                 'text'    => "❌ ورودی نامعتبر است.\n\n" .
-                "لطفاً آیدی عددی کاربر، یوزرنیم او (که قبلا ربات را استارت زده) را ارسال کرده یا پیام وی را فوروارد کنید.",
+                    "لطفاً آیدی عددی کاربر، یوزرنیم او (که قبلا ربات را استارت زده) را ارسال کرده یا پیام وی را فوروارد کنید.",
             ]);
         }
         $this->fileHandler->saveState($chatId, '');
@@ -1128,5 +1144,41 @@ class BotHandler
             'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
         ]);
     }
+    // Bot/BotHandler.php -> داخل کلاس BotHandler
 
+    private function downloadFileFromTelegram(string $fileId, string $fileType): ?string
+    {
+        $fileInfo = $this->sendRequest('getFile', ['file_id' => $fileId]);
+        if (!$fileInfo || !$fileInfo['ok']) {
+            error_log("Failed to get file info for file_id: " . $fileId);
+            return null;
+        }
+        $filePath = $fileInfo['result']['file_path'];
+
+        $fileUrl = "https://api.telegram.org/file/bot" . $this->botToken . "/" . $filePath;
+
+        $uploadsDir = __DIR__ . '/../uploads/' . $fileType . '/';
+        if (!is_dir($uploadsDir)) {
+            mkdir($uploadsDir, 0775, true); // ساخت پوشه در صورت عدم وجود
+        }
+        $fileExtension = pathinfo($filePath, PATHINFO_EXTENSION);
+        $uniqueName = uniqid('goal_', true) . '.' . $fileExtension;
+        $localFilePath = $uploadsDir . $uniqueName;
+
+        $config = AppConfig::getConfig();
+        $baseUrl = $config['app']['base_url'];
+        $publicUrl = $baseUrl . 'uploads/' . $fileType . '/' . $uniqueName;
+
+        $fileContents = file_get_contents($fileUrl);
+        if ($fileContents === false) {
+            error_log("Failed to download file from: " . $fileUrl);
+            return null;
+        }
+        if (file_put_contents($localFilePath, $fileContents) === false) {
+            error_log("Failed to save file to: " . $localFilePath);
+            return null;
+        }
+
+        return $publicUrl;
+    }
 }
